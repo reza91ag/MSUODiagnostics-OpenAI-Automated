@@ -30,3 +30,7 @@ The dashboard header has a single **Export** dropdown (hover on desktop; click o
 ## Custom operation mappings
 
 Use **+ Add New Operation** next to the operation filter. Enter a **Dropdown name** (for example `SignUP`) and an **Actual action in log** (for example `SignUp`, `Metadata SignUp Staged`, or a literal logged message fragment). The case-insensitive literal match is applied only within a completed request lifecycle. The mapping is saved in the server's existing `msuo_live_config.json` and appears in the operation dropdown even before any matching requests arrive. Existing mappings can be removed in the same dialog. The parser also recognizes `Logic Node <Action> discovered` as an automatic fallback when a metadata-staged line is absent. An operation with no completed lifecycle cannot produce latency measurements.
+
+## Built-in SignUp / SignIn operation order
+
+The operation dropdown always includes **SignUp** followed by **SignIn**, even if the connected logs do not yet contain completed requests for either. SignUp is detected automatically from the EntryFlow WatchDog format `Metadata SignUp Staged. Now asking for Logic Discovery...` (or `Logic Node SignUp discovered at ...`). Classification is limited to lines belonging to the current completed lifecycle so that a previous SignIn request cannot cause a SignUp to be mislabeled. Other detected and custom operations follow alphabetically. Incomplete requests are not used for timing measurements.

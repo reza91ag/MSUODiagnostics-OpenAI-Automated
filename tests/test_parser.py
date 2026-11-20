@@ -123,6 +123,49 @@ Request Lifecycle Completed succesfully! | TimeNow: 2026-11-20 12:00:02.000 | Fi
                 server.CONFIG = original
                 server.invalidate_cache()
 
+    def test_signup_from_uploaded_entryflow_watchdog_format(self):
+        # Anonymized, timestamp-preserving lines from Watchdog-Log-EntryFlow.
+        text = """WATCHDOG SNAPSHOT - 2026-08-04 14:08:09.076 UTC
+FULL LOGS
+Watchdog AWake! | TimeNow: 2026-08-04 14:07:37.299 | File: BaseEntity.cs | Class: BaseEntity | Method: .ctor
+Kernel Authenticating Application License... | TimeNow: 2026-08-04 14:07:37.331 | File: BaseEntity.cs
+Metadata SignUp Staged. Now asking for Logic Discovery... | TimeNow: 2026-08-04 14:07:37.410 | File: OrchestrationEngine.cs
+Logic Node SignUp discovered at 17363659.Now Executing... | TimeNow: 2026-08-04 14:07:37.410 | File: OrchestrationEngine.cs
+Request Lifecycle Completed succesfully! | TimeNow: 2026-08-04 14:08:09.076 | File: BaseEntity.cs
+"""
+        source = {"path": "test", "persistence": "direct", "startup": "auto"}
+        events = server.extract_events(text, source, "Watchdog-Log-EntryFlow")
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["operation"], "SignUp")
+        self.assertEqual(events[0]["duration_ms"], 31745)
+
+    def test_signup_default_precedes_signin_with_no_records(self):
+        self.assertEqual(server.available_operations([], []), ["SignUp", "SignIn"])
+        self.assertEqual(server.available_operations(
+            [{"operation": "SignIn"}, {"operation": "UpdateDashboard CRUD"},
+             {"operation": "SignUp"}, {"operation": "ResetPassword"}], []),
+            ["SignUp", "SignIn", "ResetPassword", "UpdateDashboard CRUD"])
+
+    def test_signup_default_respects_existing_custom_spelling(self):
+        self.assertEqual(server.available_operations(
+            [{"operation": "SignUP"}], [{"name": "SignUP", "action": "signup"}]),
+            ["SignUP", "SignIn"])
+
+    def test_signup_does_not_inherit_prior_request_metadata(self):
+        text = """WATCHDOG SNAPSHOT - 2026-11-20 12:00:04.000 UTC
+FULL LOGS
+Kernel Authenticating Application License... | TimeNow: 2026-11-20 12:00:00.000 | File: BaseEntity.cs
+Metadata SignIn Staged. Now asking for Logic Discovery... | TimeNow: 2026-11-20 12:00:00.100 | File: OrchestrationEngine.cs
+Request Lifecycle Completed succesfully! | TimeNow: 2026-11-20 12:00:01.000 | File: BaseEntity.cs
+Kernel Authenticating Application License... | TimeNow: 2026-11-20 12:00:02.000 | File: BaseEntity.cs
+Metadata SignUp Staged. Now asking for Logic Discovery... | TimeNow: 2026-11-20 12:00:02.100 | File: OrchestrationEngine.cs
+Logic Node SignUp discovered at 42.Now Executing... | TimeNow: 2026-11-20 12:00:02.100 | File: OrchestrationEngine.cs
+Request Lifecycle Completed succesfully! | TimeNow: 2026-11-20 12:00:04.000 | File: BaseEntity.cs
+"""
+        source = {"path": "test", "persistence": "direct", "startup": "auto"}
+        events = server.extract_events(text, source, "test.log")
+        self.assertEqual([event["operation"] for event in events], ["SignIn", "SignUp"])
+
     def test_signup_recognized_from_logic_node_without_metadata(self):
         text = """WATCHDOG SNAPSHOT - 2026-11-20 12:00:02.000 UTC
 FULL LOGS

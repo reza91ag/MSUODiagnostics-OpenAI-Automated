@@ -40,6 +40,7 @@ LOGIC_NODE_PATTERN = re.compile(r"Logic Node\s+([\w-]+)\s+discovered\b", re.IGNO
 APPLICATION_ACTION_PATTERN = re.compile(r"\b[\w-]+/([\w-]+):", re.IGNORECASE)
 LOG_EXTENSIONS = {".txt", ".log", ".trace", ".out"}
 LOG_FILENAMES = {"watchdog-log-public"}  # WatchDog writes an extensionless production log
+DEFAULT_OPERATIONS = ("SignUp", "SignIn")  # Fixed dropdown order; visible before first matching request
 CONFIG_LOCK = threading.RLock()
 CACHE_LOCK = threading.Lock()
 CACHE = {"at": 0.0, "records": [], "sources": [], "warnings": []}
@@ -171,8 +172,9 @@ def extract_events(text, source, filename, operation_mappings=()):
             ms = round((end - start).total_seconds() * 1000)
             if ms < 0:
                 continue
-            chunk = captures[max(0, start_index - 12):end_index + 1]
-            messages = [x[0] for x in chunk]
+            # The action belongs to this request, not the preceding 12 log lines:
+            # concatenated snapshots may contain a different earlier operation.
+            messages = [x[0] for x in captures[start_index:end_index + 1]]
             operation = "Unknown"
             for message in messages:
                 found = OPERATION_PATTERN.search(message)
@@ -361,6 +363,21 @@ def percentile(values, q):
     return sorted_values[lo] + (sorted_values[hi] - sorted_values[lo]) * (index - lo)
 
 
+def available_operations(records, custom_mappings=()):
+    """Built-in SignUp and SignIn first; then observed/custom actions alphabetically."""
+    choices = {record["operation"] for record in records}
+    choices.update(mapping["name"] for mapping in custom_mappings
+                   if isinstance(mapping, dict) and isinstance(mapping.get("name"), str))
+    ordered = []
+    for builtin in DEFAULT_OPERATIONS:
+        # Keep an existing alias's exact spelling so selecting it filters records.
+        matching = sorted((name for name in choices if name.casefold() == builtin.casefold()),
+                          key=lambda name: (name != builtin, name))
+        ordered.append(matching[0] if matching else builtin)
+        choices = {name for name in choices if name.casefold() != builtin.casefold()}
+    return ordered + sorted(choices, key=str.casefold)
+
+
 def compute_data(operation="all", window=50):
     records, statuses, warnings = get_scan()
     filtered = records if operation == "all" else [r for r in records if r["operation"] == operation]
@@ -395,9 +412,7 @@ def compute_data(operation="all", window=50):
     return {
         "generated_utc": datetime.now(timezone.utc).isoformat(),
         "total_requests": len(records),
-        "operations": sorted({r["operation"] for r in records} |
-                             {item["name"] for item in CONFIG.get("operations", [])
-                              if isinstance(item, dict) and "name" in item}),
+        "operations": available_operations(records, CONFIG.get("operations", [])),
         "selected_operation": operation, "window": window,
         "groups": groups, "recent": filtered[:50],
         "sources": statuses, "warnings": warnings,
