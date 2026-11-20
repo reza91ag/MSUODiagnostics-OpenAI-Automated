@@ -1,11 +1,11 @@
 # MSUO Observatory: Windows Server deployment
 
 The deployment workflow is prepared for `reza91ag/MSUODiagnostics-OpenAI-Automated`.
-It is **manual-only** until the initial server deployment is verified.
+The initial deployment completed successfully on 2026-11-20. Pushes affecting application source and deployment scripts automatically trigger deployment, and manual dispatch is also supported.
 
 ## 1. Secure the repository
 
-**Change repository visibility to Private before connecting a self-hosted runner.**
+**Keep the repository Private while using a production self-hosted runner.**
 Do not put production WatchDog logs, tokens, Cloudflare credentials, or `msuo_live_config.json` in Git.
 
 ## 2. Install Python
@@ -21,15 +21,15 @@ py -3 --version
 
 In GitHub: **Repository → Settings → Actions → Runners → New self-hosted runner → Windows x64**.
 Follow the GitHub-generated commands on the Windows Server.
-Add the custom label `msuo-observatory` to the runner. Configure it to run as a Windows service.
+Use a dedicated runner registered to this repository. Configure it to run as a Windows service for unattended deployments.
 
-The workflow expects runner labels `self-hosted`, `Windows`, `X64`, and `msuo-observatory`.
+The workflow expects the default `self-hosted` runner label.
 The runner account must have permission to write `C:\MSUO\Observatory` and control the
 `MSUO-Observatory` scheduled task. Do not use a shared runner for untrusted repositories.
 
 ## 4. Create the dashboard startup task (one time)
 
-From a checked-out copy of this repository, open **Windows PowerShell as Administrator**:
+The workflow automatically registers the task on its first deployment if the runner has administrative permissions. To create it manually from a checked-out copy, open **Windows PowerShell as Administrator**:
 
 ```powershell
 .\scripts\setup_windows_task.ps1
@@ -50,8 +50,7 @@ trusted dedicated runner service account with sufficient privileges.
 
 ## 5. Deploy
 
-When `server.py`, `web/index.html` and `tests/` are in the repository,
-open **Actions → Deploy MSUO Observatory (Windows) → Run workflow**.
+The source is already in the repository. Pushes to `main` affecting application or deployment files automatically deploy. You can also open **Actions → Deploy MSUO Observatory (Windows) → Run workflow**.
 
 The workflow tests the parser, copies the two application files to
 `C:\MSUO\Observatory`, restarts the scheduled task, and checks the dashboard
@@ -68,8 +67,6 @@ Tunnel: `observatory.msuo-runtime.io` → `http://localhost:8765`.
 Protect the hostname with **Cloudflare Access** before exposing the dashboard.
 The current app's configuration endpoints are not independently authenticated.
 
-## 7. Enable automatic deployment
+## 7. Automatic deployment
 
-After the first deployment is confirmed, add a `push` trigger for the `main`
-branch to `.github/workflows/deploy-windows.yml`. Use a protected branch or a
-GitHub production environment approval rule for changes affecting production.
+The workflow already triggers on relevant source changes to `main` and can also be started manually. For a production self-hosted runner, protect `main` or require approval in the GitHub production environment.
