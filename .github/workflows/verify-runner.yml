@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   verify:
-    runs-on: [self-hosted, Windows, X64]
+    runs-on: self-hosted
     timeout-minutes: 5
     steps:
       - name: Verify Python
