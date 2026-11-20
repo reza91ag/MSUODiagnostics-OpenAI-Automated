@@ -21,6 +21,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 from latex_export import render_latex
+from pdf_export import render_pdf
 
 ROOT = Path(__file__).resolve().parent
 CONFIG_PATH = ROOT / "msuo_live_config.json"
@@ -410,6 +411,23 @@ class Handler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", "application/x-tex; charset=utf-8")
             self.send_header("Content-Disposition", 'attachment; filename="msuo_diagnostics_tables.tex"')
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+        elif url.path == "/api/export.pdf":
+            args = parse_qs(url.query)
+            operation = args.get("operation", ["all"])[0]
+            try:
+                window = int(args.get("window", ["50"])[0])
+            except ValueError:
+                window = 50
+            window = window if window in (0, 10, 20, 50, 100, 500) else 50
+            payload = render_pdf(compute_data(operation, window))
+            self.send_response(200)
+            self.send_header("Content-Type", "application/pdf")
+            self.send_header("Content-Disposition", 'attachment; filename="msuo_diagnostics_report.pdf"')
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("Content-Length", str(len(payload)))
