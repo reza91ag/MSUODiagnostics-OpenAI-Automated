@@ -171,7 +171,7 @@ Request Lifecycle Completed succesfully! | TimeNow: 2026-11-20 12:00:02.000 | Fi
             server.validate_operation_mappings([{"name": "SignUP", "action": "SignUp"},
                                                 {"name": "Registration", "action": "signup"}])
         with self.assertRaises(ValueError):
-            server.validate_operation_mappings([{"name": "Bad\\nName", "action": "SignUp"}])
+            server.validate_operation_mappings([{"name": "Bad" + chr(10) + "Name", "action": "SignUp"}])
 
     def test_mapping_cache_changes_without_log_file_changes(self):
         import tempfile
