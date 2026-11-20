@@ -4,7 +4,7 @@ Live WatchDog request-lifecycle diagnostics for EntryFlow and OptiSpec. The dash
 
 ## Status
 
-This repository is being prepared for deployment to a Windows Server using GitHub Actions and a self-hosted Windows runner. The application source must be added before deployment can run.
+The application source, parser tests, and Windows deployment workflow are committed. A dedicated self-hosted Windows runner deploys source changes to the server after the tests pass.
 
 ## Local application
 
@@ -12,10 +12,9 @@ The application uses Python 3.10+ and runs locally on `127.0.0.1:8765`. Configur
 
 ## Deployment plan
 
-1. Add `server.py`, `web/`, Windows launch scripts, and tests from the MSUO Live Benchmark application package.
-2. Install a self-hosted GitHub Actions runner on the Windows Server with restricted permissions.
-3. Configure the deployment directory and a managed service or scheduled task for the application.
-4. Add an approved GitHub Actions deployment workflow.
-5. Expose the dashboard via the existing Cloudflare Tunnel with Cloudflare Access authentication.
+1. The self-hosted Windows runner checks out the repository and runs the parser tests.
+2. The deployment workflow registers the Observatory startup task if needed and copies the application to `C:\MSUO\Observatory`.
+3. The workflow restarts the dashboard and checks `http://127.0.0.1:8765`.
+4. For remote access, publish the dashboard through an existing Cloudflare Tunnel with Cloudflare Access authentication.
 
-**Security:** This repository is currently public. Make it private before connecting a production self-hosted runner. Do not upload real WatchDog logs or secrets.
+**Security:** Keep this repository private. Do not upload production WatchDog logs, credentials, or secrets. The included `sample_logs` are anonymized test fixtures.
