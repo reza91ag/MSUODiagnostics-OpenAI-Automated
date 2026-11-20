@@ -135,7 +135,7 @@ function renderRecent(records){const tbody=$('recentBody');tbody.replaceChildren
 }
 function updateOps(ops){const select=$('operation'),previous=select.value;select.replaceChildren();const all=dom('option','All operations');all.value='all';select.append(all);for(const name of ops){const opt=dom('option',name);opt.value=name;select.append(opt);}select.value=ops.includes(previous)?previous:'all';}
 function render(d){data=d;syncExportLinks();const groups=d.groups;const available=groups.filter(g=>g.n);$('total').textContent=num(d.total_requests);$('sources').textContent=`${d.sources.filter(s=>s.ok).length} / ${d.sources.length}`;$('sourcesHint').textContent=`${d.sources.reduce((a,s)=>a+s.files,0)} log files accessible`;
- if(available.length){const best=[...available].sort((a,b)=>a.latest_ms-b.latest_ms)[0];$('fastest').textContent=ms(best.latest_ms);$('fastestLabel').textContent=best.label;}else{$('fastest').textContent='—';$('fastestLabel').textContent='Awaiting samples';}
+ if(available.length){const best=[...available].sort((a,b)=>a.fastest_ms-b.fastest_ms)[0];$('fastest').textContent=ms(best.fastest_ms);$('fastestLabel').textContent=best.label;}else{$('fastest').textContent='—';$('fastestLabel').textContent='Awaiting samples';}
  $('lastScan').textContent=new Date(d.generated_utc).toLocaleTimeString();const ok=d.sources.some(s=>s.ok);$('status').innerHTML=`<span class="dot ${ok?'':'bad'}"></span><span>${ok?'Monitoring live':'No connected source'}</span>`;
  const warn=d.warnings.slice(0,5);$('warnings').replaceChildren();if(warn.length){const w=dom('div',warn.join('\n'),'warning');$('warnings').append(w);}
  renderChart(groups);renderSummary(groups);renderRecent(d.recent);
