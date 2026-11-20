@@ -64,7 +64,7 @@ dialog{border:0;border-radius:15px;padding:0;width:min(850px,94vw);box-shadow:0 
     <div class="metric"><small>Last scan</small><strong id="lastScan" style="font-size:22px">—</strong><span class="hint">Times shown in local browser time</span></div>
   </section>
   <section class="panel">
-    <div class="panel-head"><div><h2>Lifecycle latency · Descending</h2><p>Momentary request vs rolling average, grouped by startup and persistence strategy</p></div><div class="legend"><span><i class="swatch" style="background:#3978a8"></i>Momentary</span><span><i class="swatch" style="background:#a4bdd0"></i>Average</span><span><i class="swatch" style="background:#138b82"></i>Fastest</span></div></div>
+    <div class="panel-head"><div><h2>Lifecycle latency · Descending</h2><p>Momentary request vs rolling average, grouped by startup and persistence strategy</p></div><div class="legend"><span><i class="swatch" style="background:#3978a8"></i>Momentary</span><span><i class="swatch" style="background:#a4bdd0"></i>Average</span><span><i class="swatch" style="background:#138b82"></i>Fastest observed (marker)</span></div></div>
     <div class="chart-wrap"><svg id="chart" role="img" aria-label="Live descending horizontal latency bar chart" viewBox="0 0 1220 500"></svg></div>
     <div class="note"><strong>Divergence</strong> = (latest request − mean) / mean × 100%. Negative means the latest request was faster than its average. Cold detection uses a BaseEntity constructor capture; missing constructor captures are treated as warm unless overridden. <strong>Timing:</strong> first Ingest capture to lifecycle completion, not HTTP round-trip or confirmed cloud durability.</div>
   </section>
@@ -107,18 +107,19 @@ function divergence(g){if(g.n<2)return '— (n<2)';const d=g.divergence_pct;retu
 function sortGroups(groups){const k=$('sort').value==='mean'?'mean_ms':'latest_ms';return [...groups].sort((a,b)=>(b[k]??-1)-(a[k]??-1));}
 function renderChart(groups){
  const svg=$('chart');svg.replaceChildren();const sorted=sortGroups(groups);
- const maxVal=Math.max(1,...sorted.flatMap(g=>[g.latest_ms??0,g.mean_ms??0]));
+ const maxVal=Math.max(1,...sorted.flatMap(g=>[g.latest_ms??0,g.mean_ms??0,g.fastest_ms??0]));
  const step=maxVal<=250?50:maxVal<=1200?250:maxVal<=3000?500:maxVal<=6000?1000:maxVal<=12000?2000:Math.ceil(maxVal/5/1000)*1000;
  const maxAxis=Math.max(step,Math.ceil(maxVal/step)*step);const W=1220,left=254,plotW=795,right=171,top=65,spacing=96,bottom=top+4*spacing;
  for(let t=0;t<=maxAxis;t+=step){const x=left+t/maxAxis*plotW;svg.append(node('line',{x1:x,x2:x,y1:top-17,y2:bottom+5,class:'tickline'}));svg.append(node('text',{x,y:bottom+33,'text-anchor':'middle',class:'axis-text'},num(t)));}
- const fast=Math.min(...sorted.filter(g=>g.latest_ms!==null).map(g=>g.latest_ms));
  sorted.forEach((g,i)=>{
    const y=top+i*spacing;svg.append(node('text',{x:left-20,y:y+29,'text-anchor':'end',class:'bar-label'},g.label));
    if(g.latest_ms==null){svg.append(node('text',{x:left+14,y:y+35,class:'delta-label'},'Awaiting completed requests'));return;}
-   const isFast=g.latest_ms===fast;let entries=[['latest_ms',y+3,isFast?'#138b82':'#3978a8','Momentary'],['mean_ms',y+36,'#a4bdd0','Average']];
+   let entries=[['latest_ms',y+3,'#3978a8','Momentary'],['mean_ms',y+36,'#a4bdd0','Average']];
    const display=$('display').value;
    if(display!=='both')entries=entries.filter(([key])=>key===(display==='latest'?'latest_ms':'mean_ms')).map(([key,,color,label])=>[key,y+21,color,label]);
    for(const [key,barY,color,label] of entries){const value=g[key];const width=value/maxAxis*plotW;const rect=node('rect',{x:left,y:barY,width:Math.max(1,width),height:25,rx:1,fill:color});rect.append(node('title',{},`${g.label} • ${label}: ${ms(value)}`));svg.append(rect);const tx=Math.min(left+width+10,W-92);svg.append(node('text',{x:tx,y:barY+18,class:'value-label'},ms(value)));}
+   // Show the actual minimum in the selected window, not the most recent sample.
+   if(g.fastest_ms!=null){const markerX=left+g.fastest_ms/maxAxis*plotW;const markerY=y+3;svg.append(node('line',{x1:markerX,x2:markerX,y1:markerY-5,y2:markerY+33,stroke:'#138b82','stroke-width':4}));svg.append(node('text',{x:Math.max(left+8,Math.min(markerX+9,W-160)),y:y-9,class:'value-label',fill:'#138b82'},`Fastest ${ms(g.fastest_ms)}`));}
    const delta=g.n<2?'Divergence: insufficient samples':`Divergence: ${divergence(g)}    •    n = ${g.n}`;
    svg.append(node('text',{x:left+3,y:y+83,class:'delta-label'},delta));
  });
