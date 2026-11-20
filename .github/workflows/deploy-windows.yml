@@ -1,9 +1,16 @@
 name: Deploy MSUO Observatory (Windows)
 
-# First deployment is deliberately manual. After the runner and service are
-# verified, push-to-main deployment can be enabled safely.
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'server.py'
+      - 'web/**'
+      - 'tests/**'
+      - 'sample_logs/**'
+      - 'scripts/**'
+      - '.github/workflows/deploy-windows.yml'
 
 permissions:
   contents: read
@@ -15,7 +22,7 @@ concurrency:
 jobs:
   deploy:
     name: Test and deploy on IONOS Windows Server
-    runs-on: [self-hosted, Windows, X64]
+    runs-on: self-hosted
     timeout-minutes: 15
     environment: production
     steps:
@@ -31,6 +38,19 @@ jobs:
         shell: powershell
         run: |
           py -3 -m unittest discover -s tests -v
+
+      - name: Register Observatory startup task if missing
+        shell: powershell
+        env:
+          MSUO_DEPLOY_DIR: ${{ vars.MSUO_DEPLOY_DIR }}
+        run: |
+          $target = $env:MSUO_DEPLOY_DIR
+          if ([string]::IsNullOrWhiteSpace($target)) {
+            $target = 'C:\MSUO\Observatory'
+          }
+          if (-not (Get-ScheduledTask -TaskName 'MSUO-Observatory' -ErrorAction SilentlyContinue)) {
+            & .\scripts\setup_windows_task.ps1 -Destination $target
+          }
 
       - name: Deploy and restart Observatory
         shell: powershell
