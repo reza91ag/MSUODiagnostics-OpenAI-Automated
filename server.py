@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import csv
 import hashlib
+import hmac
 import io
 import json
 import math
@@ -32,6 +33,40 @@ VALID_STARTUP = {"auto", "cold", "warm"}
 MAX_FILES_PER_SOURCE = 400
 MAX_FILE_BYTES = 12 * 1024 * 1024
 MAX_SOURCES = 12
+# Only the salted PBKDF2 verifier is stored in source control, never the password.
+SOURCE_PASSWORD_SALT = bytes.fromhex("a98e9ff0c1f663dcb1d7f66d7b75e8d3")
+SOURCE_PASSWORD_HASH = bytes.fromhex("3f0c7bb88fac65ccdd613b3b02e9ad92b2d0ad849362f56d68755eefab1fa377")
+SOURCE_PASSWORD_ITERATIONS = 600_000
+SOURCE_AUTH_LOCK = threading.Lock()
+SOURCE_AUTH_FAILURES = {}
+SOURCE_AUTH_MAX_FAILURES = 5
+SOURCE_AUTH_WINDOW_SECONDS = 120
+
+
+def check_source_password(password, client_ip):
+    """Validate a source-management password, throttling repeated failures per client."""
+    now = time.monotonic()
+    with SOURCE_AUTH_LOCK:
+        recent = [t for t in SOURCE_AUTH_FAILURES.get(client_ip, ()) if now - t < SOURCE_AUTH_WINDOW_SECONDS]
+        SOURCE_AUTH_FAILURES[client_ip] = recent
+        if len(recent) >= SOURCE_AUTH_MAX_FAILURES:
+            return 429
+    valid = (
+        isinstance(password, str)
+        and 0 < len(password) <= 256
+        and hmac.compare_digest(
+            hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"),
+                                SOURCE_PASSWORD_SALT, SOURCE_PASSWORD_ITERATIONS),
+            SOURCE_PASSWORD_HASH,
+        )
+    )
+    with SOURCE_AUTH_LOCK:
+        if valid:
+            SOURCE_AUTH_FAILURES.pop(client_ip, None)
+            return 200
+        SOURCE_AUTH_FAILURES.setdefault(client_ip, []).append(now)
+    return 401
+
 
 TIME_PATTERN = re.compile(r"TimeNow:\s*(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3,6})")
 SNAPSHOT_PATTERN = re.compile(r"(?=WATCHDOG SNAPSHOT\s*-\s*\d{4}-\d{2}-\d{2})")
@@ -439,6 +474,17 @@ class Handler(BaseHTTPRequestHandler):
     def send_json(self, obj, status=200):
         self.send_bytes(json.dumps(obj, ensure_ascii=False).encode("utf-8"), status=status)
 
+    def require_source_password(self):
+        status = check_source_password(
+            self.headers.get("X-MSUO-Source-Password"), self.client_address[0]
+        )
+        if status == 200:
+            return True
+        message = ("Too many incorrect attempts. Try again in two minutes."
+                   if status == 429 else "Incorrect or missing configuration password.")
+        self.send_json({"error": message}, status)
+        return False
+
     def read_json(self):
         length = int(self.headers.get("Content-Length", "0"))
         if length < 1 or length > 100_000:
@@ -452,6 +498,8 @@ class Handler(BaseHTTPRequestHandler):
         elif url.path == "/assets/msuo-logo.svg":
             self.send_bytes(LOGO_PATH.read_bytes(), "image/svg+xml; charset=utf-8")
         elif url.path == "/api/config":
+            if not self.require_source_password():
+                return
             with CONFIG_LOCK:
                 self.send_json({"sources": CONFIG.get("sources", [])})
         elif url.path == "/api/operations":
@@ -521,6 +569,8 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json({"error": "Not found"}, 404)
 
     def do_POST(self):
+        if self.path == "/api/config" and not self.require_source_password():
+            return
         try:
             payload = self.read_json()
             if self.path == "/api/config":
