@@ -15,7 +15,7 @@ concurrency:
 jobs:
   deploy:
     name: Test and deploy on IONOS Windows Server
-    runs-on: [self-hosted, Windows, X64, msuo-observatory]
+    runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 15
     environment: production
     steps:
