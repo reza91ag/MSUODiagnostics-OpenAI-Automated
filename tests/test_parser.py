@@ -72,6 +72,23 @@ Request Lifecycle Completed succesfully! | TimeNow: 2026-11-20 12:00:02.000 | Fi
             target.write_text(sample + sample.replace("12:00:02.000", "12:00:04.000").replace("12:00:00.000", "12:00:03.000"))
             self.assertEqual(len(server.parse_file_cached(target, source)), 2)
 
+    def test_extensionless_watchdog_log_discovered_from_folder(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp)
+            target = folder / "Watchdog-Log-Public"
+            target.write_text("WATCHDOG SNAPSHOT - 2026-11-20 12:00:00.000 UTC\n", encoding="utf-8")
+            self.assertEqual(server.files_in_source(folder), [target])
+            self.assertEqual(server.files_in_source(target), [target])
+
+    def test_extensionless_watchdog_log_case_insensitive(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp)
+            target = folder / "WATCHDOG-LOG-PUBLIC"
+            target.write_text("WATCHDOG SNAPSHOT - 2026-11-20 12:00:00.000 UTC\n", encoding="utf-8")
+            self.assertEqual(server.files_in_source(folder), [target])
+
     def test_incomplete_requests_excluded(self):
         text = "Kernel Authenticating Application License... | TimeNow: 2026-11-20 12:00:00.000 | File: BaseEntity.cs\n"
         source = {"path": "test", "persistence": "direct", "startup": "auto"}
