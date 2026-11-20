@@ -430,7 +430,7 @@ def compute_data(operation="all", window=50):
                 "startup": startup, "persistence": persistence,
                 "label": f"{startup.title()} / {'Direct cloud' if persistence == 'direct' else 'Offline-first'}",
                 "n": len(values), "total_n": len(matching),
-                "latest_ms": latest, "mean_ms": round(mean, 2),
+                "latest_ms": latest, "fastest_ms": min(values), "mean_ms": round(mean, 2),
                 "median_ms": round(statistics.median(values), 2),
                 "p95_ms": round(percentile(values, .95), 2),
                 "stddev_ms": round(statistics.pstdev(values), 2),
@@ -441,7 +441,7 @@ def compute_data(operation="all", window=50):
         else:
             groups.append({"startup": startup, "persistence": persistence,
                            "label": f"{startup.title()} / {'Direct cloud' if persistence == 'direct' else 'Offline-first'}",
-                           "n": 0, "total_n": 0, "latest_ms": None, "mean_ms": None,
+                           "n": 0, "total_n": 0, "latest_ms": None, "fastest_ms": None, "mean_ms": None,
                            "median_ms": None, "p95_ms": None, "stddev_ms": None,
                            "divergence_ms": None, "divergence_pct": None, "latest_utc": None})
     return {
