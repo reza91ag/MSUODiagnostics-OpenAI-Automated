@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111827">
+  <meta name="description" content="MSUO Live Execution Snapshot: automatically published WatchDog measurement report.">
+  <title>MSUO™ Live Execution Snapshot | Sky Digital Dreams®</title>
+  <link rel="icon" type="image/svg+xml" href="./msuo-logo.svg">
+  <style>
+    :root {color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;}
+    * {box-sizing:border-box;}
+    html,body {margin:0;min-height:100%;background:#111827;color:#f9fafb;}
+    header {min-height:78px;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:12px clamp(16px,3vw,40px);border-bottom:1px solid #374151;}
+    .identity {display:flex;align-items:center;gap:13px;min-width:0;}
+    .identity img {width:43px;height:43px;object-fit:contain;filter:brightness(0) invert(1);}
+    .name strong {display:block;font-size:16px;font-weight:650;letter-spacing:-.025em;}
+    .name span {display:block;margin-top:5px;font-size:12px;color:#9ca3af;}
+    .actions {display:flex;gap:9px;flex-shrink:0;}
+    a {color:inherit;text-decoration:none;}
+    .btn {border:1px solid #4b5563;border-radius:8px;font-size:13px;padding:10px 13px;color:#f9fafb;white-space:nowrap;}
+    .btn:hover,.btn:focus-visible {background:#374151;}
+    .primary {background:#e5e7eb;border-color:#e5e7eb;color:#111827;font-weight:600;}
+    .primary:hover,.primary:focus-visible {background:#fff;}
+    main {height:calc(100dvh - 78px);min-height:420px;background:#1f2937;}
+    iframe {border:0;width:100%;height:100%;display:block;background:#525659;}
+    @media(max-width:640px) {
+      header{min-height:74px;padding:10px 12px;}
+      main{height:calc(100dvh - 74px);}
+      .identity img{width:34px;height:34px;}
+      .name strong{font-size:13px;}
+      .name span{font-size:10px;}
+      .btn{padding:8px 9px;font-size:11px;}
+      .hide-small{display:none;}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="identity">
+      <img src="./msuo-logo.svg" alt="MSUO logo">
+      <div class="name">
+        <strong>MSUO™ Live Execution Snapshot</strong>
+        <span id="updated">Sky Digital Dreams® · WatchDog measurements</span>
+      </div>
+    </div>
+    <nav class="actions" aria-label="PDF actions">
+      <a id="open" class="btn" href="./MSUO-Snapshot.pdf" target="_blank" rel="noopener noreferrer">Open PDF</a>
+      <a id="download" class="btn primary hide-small" href="./MSUO-Snapshot.pdf" download="MSUO-Snapshot.pdf">Download</a>
+    </nav>
+  </header>
+  <main>
+    <iframe id="viewer" title="MSUO Live Execution Snapshot PDF" src="./MSUO-Snapshot.pdf#toolbar=1&navpanes=1&view=FitH">
+      <p>PDF preview unavailable. <a href="./MSUO-Snapshot.pdf">Open the PDF</a>.</p>
+    </iframe>
+  </main>
+  <script>
+    let currentVersion = '';
+    async function refreshSnapshot() {
+      try {
+        const response = await fetch('./snapshot-version.txt?t=' + Date.now(), {cache:'no-store'});
+        if (!response.ok) return;
+        const version = (await response.text()).trim();
+        if (!/^[a-f0-9]{64}$/.test(version)) return;
+        if (version !== currentVersion) {
+          currentVersion = version;
+          const url = './MSUO-Snapshot.pdf?v=' + encodeURIComponent(version);
+          document.getElementById('viewer').src = url + '#toolbar=1&navpanes=1&view=FitH';
+          document.getElementById('open').href = url;
+          document.getElementById('download').href = url;
+        }
+        const stamp = await fetch('./snapshot-updated.txt?t=' + Date.now(), {cache:'no-store'});
+        if (stamp.ok) document.getElementById('updated').textContent =
+          'Sky Digital Dreams® · Updated ' + (await stamp.text()).trim() + ' UTC';
+      } catch (_) { /* Keep the last readable PDF if the network is temporarily unavailable. */ }
+    }
+    refreshSnapshot();
+    setInterval(refreshSnapshot, 60000);
+  </script>
+</body>
+</html>

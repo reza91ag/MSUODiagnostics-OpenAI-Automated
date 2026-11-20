@@ -1,0 +1,69 @@
+name: Publish MSUO PDF Snapshot (GitHub Pages)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/5 * * * *'
+  push:
+    branches: [main]
+    paths:
+      - 'snapshot/**'
+      - 'server.py'
+      - 'pdf_export.py'
+      - 'web/msuo-logo.svg'
+      - '.github/workflows/publish-snapshot.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: msuo-snapshot-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Update Pages PDF only when measurements change
+    runs-on: self-hosted
+    timeout-minutes: 10
+    steps:
+      - name: Check out Observatory source
+        uses: actions/checkout@v4
+        with:
+          path: source
+          persist-credentials: false
+
+      - name: Check out GitHub Pages site
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: site
+          persist-credentials: true
+
+      - name: Verify publisher
+        shell: powershell
+        run: |
+          py -3 -m unittest discover -s source/snapshot -p 'test_*.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'Snapshot publisher tests failed' }
+
+      - name: Generate PDF if Observatory data changed
+        shell: powershell
+        run: |
+          py -3 source/snapshot/publish.py --source source --site site
+          if ($LASTEXITCODE -ne 0) { throw 'Snapshot generation failed' }
+
+      - name: Commit overwritten PDF to gh-pages
+        shell: powershell
+        run: |
+          git -C site config user.name "github-actions[bot]"
+          git -C site config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C site add -A
+          git -C site diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host 'No data changes; existing published PDF retained.'
+            exit 0
+          }
+          if ($LASTEXITCODE -ne 1) { throw 'Could not check staged changes' }
+          git -C site commit -m "Update MSUO execution snapshot [skip ci]"
+          if ($LASTEXITCODE -ne 0) { throw 'Could not commit snapshot' }
+          git -C site push origin HEAD:gh-pages
+          if ($LASTEXITCODE -ne 0) { throw 'Could not push snapshot to gh-pages' }
