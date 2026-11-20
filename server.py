@@ -20,9 +20,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
+from latex_export import render_latex
+
 ROOT = Path(__file__).resolve().parent
 CONFIG_PATH = ROOT / "msuo_live_config.json"
 WEB_PATH = ROOT / "web" / "index.html"
+LOGO_PATH = ROOT / "web" / "msuo-logo.svg"
 VALID_PERSISTENCE = {"direct", "offline"}
 VALID_STARTUP = {"auto", "cold", "warm"}
 MAX_FILES_PER_SOURCE = 400
@@ -366,6 +369,8 @@ class Handler(BaseHTTPRequestHandler):
         url = urlsplit(self.path)
         if url.path in ("/", "/index.html"):
             self.send_bytes(WEB_PATH.read_bytes(), "text/html; charset=utf-8")
+        elif url.path == "/assets/msuo-logo.svg":
+            self.send_bytes(LOGO_PATH.read_bytes(), "image/svg+xml; charset=utf-8")
         elif url.path == "/api/config":
             with CONFIG_LOCK:
                 self.send_json({"sources": CONFIG.get("sources", [])})
@@ -393,6 +398,23 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
             self.wfile.write(data)
+        elif url.path == "/api/export.tex":
+            args = parse_qs(url.query)
+            operation = args.get("operation", ["all"])[0]
+            try:
+                window = int(args.get("window", ["50"])[0])
+            except ValueError:
+                window = 50
+            window = window if window in (0, 10, 20, 50, 100, 500) else 50
+            payload = render_latex(compute_data(operation, window)).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/x-tex; charset=utf-8")
+            self.send_header("Content-Disposition", 'attachment; filename="msuo_diagnostics_tables.tex"')
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
         elif url.path == "/api/health":
             self.send_json({"status": "ok"})
         else:
