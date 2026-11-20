@@ -1,0 +1,32 @@
+name: Verify Windows deployment runner
+
+on:
+  push:
+    paths:
+      - .github/workflows/verify-runner.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 5
+    steps:
+      - name: Verify Python
+        shell: powershell
+        run: |
+          py -3 --version
+          py -3 -c "import sys; assert sys.version_info >= (3, 10); print(sys.executable)"
+      - name: Check deployment account and destination
+        shell: powershell
+        run: |
+          Write-Host "Runner identity: $(whoami)"
+          Write-Host "Computer: $env:COMPUTERNAME"
+          $dest = 'C:\MSUO\Observatory'
+          New-Item -ItemType Directory -Path $dest -Force | Out-Null
+          $test = Join-Path $dest '.runner-write-test'
+          'ok' | Set-Content -Path $test
+          Remove-Item -Path $test
+          Write-Host 'Deployment directory writable: yes'
