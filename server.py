@@ -36,6 +36,8 @@ MAX_SOURCES = 12
 TIME_PATTERN = re.compile(r"TimeNow:\s*(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3,6})")
 SNAPSHOT_PATTERN = re.compile(r"(?=WATCHDOG SNAPSHOT\s*-\s*\d{4}-\d{2}-\d{2})")
 OPERATION_PATTERN = re.compile(r"Metadata\s+([\w-]+)\s+Staged", re.IGNORECASE)
+LOGIC_NODE_PATTERN = re.compile(r"Logic Node\s+([\w-]+)\s+discovered\b", re.IGNORECASE)
+APPLICATION_ACTION_PATTERN = re.compile(r"\b[\w-]+/([\w-]+):", re.IGNORECASE)
 LOG_EXTENSIONS = {".txt", ".log", ".trace", ".out"}
 LOG_FILENAMES = {"watchdog-log-public"}  # WatchDog writes an extensionless production log
 CONFIG_LOCK = threading.RLock()
@@ -46,7 +48,7 @@ FILE_CACHE_LOCK = threading.Lock()
 
 
 def default_config():
-    return {"sources": [], "overrides": {}}
+    return {"sources": [], "overrides": {}, "operations": []}
 
 
 def load_config():
@@ -57,6 +59,7 @@ def load_config():
         return {
             "sources": raw.get("sources", []) if isinstance(raw.get("sources"), list) else [],
             "overrides": raw.get("overrides", {}) if isinstance(raw.get("overrides"), dict) else {},
+            "operations": raw.get("operations", []) if isinstance(raw.get("operations"), list) else [],
         }
     except (OSError, ValueError):
         return default_config()
@@ -85,7 +88,50 @@ def parse_timestamp(s):
         return None
 
 
-def extract_events(text, source, filename):
+def validate_operation_mappings(value):
+    """Validate exact log action -> dashboard name mappings (literal text, not regex)."""
+    if not isinstance(value, list) or len(value) > 40:
+        raise ValueError("Expected up to 40 custom operations")
+    cleaned, names, actions = [], set(), set()
+    for i, item in enumerate(value):
+        if not isinstance(item, dict):
+            raise ValueError(f"Operation {i+1}: invalid mapping")
+        name, action = item.get("name"), item.get("action")
+        if not isinstance(name, str) or not isinstance(action, str):
+            raise ValueError(f"Operation {i+1}: name and action must be text")
+        name, action = name.strip(), action.strip()
+        if (not name or not action or len(name) > 80 or len(action) > 200
+                or any(ord(c) < 32 or ord(c) == 127 for c in name + action)):
+            raise ValueError(f"Operation {i+1}: invalid name or log action")
+        if name.casefold() == "all":
+            raise ValueError("All is a reserved operation name")
+        if name.casefold() in names or action.casefold() in actions:
+            raise ValueError(f"Operation {i+1}: duplicate name or log action")
+        names.add(name.casefold())
+        actions.add(action.casefold())
+        cleaned.append({"name": name, "action": action})
+    return cleaned
+
+
+def match_custom_operation(raw_operation, messages, mappings):
+    """Match a logged action or literal message within the completed lifecycle."""
+    for mapping in mappings:
+        if raw_operation.casefold() == mapping["action"].casefold():
+            return mapping["name"]
+    for mapping in mappings:
+        action = mapping["action"]
+        if re.fullmatch(r"[\w-]+", action):
+            # A token must match as a whole action, not part of another identifier.
+            pattern = rf"(?<![\w-]){re.escape(action)}(?![\w-])"
+            found = any(re.search(pattern, message, re.IGNORECASE) for message in messages)
+        else:
+            found = any(action.casefold() in message.casefold() for message in messages)
+        if found:
+            return mapping["name"]
+    return None
+
+
+def extract_events(text, source, filename, operation_mappings=()):
     """Extract completed requests; never expose raw payloads or identity-bearing log lines."""
     parts = SNAPSHOT_PATTERN.split(text.lstrip("\ufeff"))
     if len(parts) == 1:
@@ -135,10 +181,17 @@ def extract_events(text, source, filename):
                     break
             if operation == "Unknown":
                 for message in messages:
-                    found = re.search(r"(?:EntryFlow|OptiSpec)/([\w-]+):", message)
+                    found = LOGIC_NODE_PATTERN.search(message)
                     if found:
                         operation = found.group(1)
                         break
+            if operation == "Unknown":
+                for message in messages:
+                    found = APPLICATION_ACTION_PATTERN.search(message)
+                    if found:
+                        operation = found.group(1)
+                        break
+            raw_operation = operation
             lower_messages = "\n".join(messages).lower()
             if operation.lower() == "updatedashboard":
                 mutation = any(x in lower_messages for x in (
@@ -171,6 +224,12 @@ def extract_events(text, source, filename):
                 evidence = "Source startup override"
             signature = f"{source['path']}|{start.isoformat()}|{end.isoformat()}|{operation}|{ms}"
             event_id = hashlib.sha256(signature.encode("utf-8")).hexdigest()[:20]
+            # Keep event IDs stable when a user changes a dashboard alias.
+            # Search only the active lifecycle, not preceding captures.
+            action_messages = [x[0] for x in captures[start_index:end_index + 1]]
+            custom_name = match_custom_operation(raw_operation, action_messages, operation_mappings)
+            if custom_name is not None:
+                operation = custom_name
             events.append({
                 "id": event_id, "source": source.get("name") or Path(source["path"]).name,
                 "filename": filename, "persistence": source["persistence"],
@@ -220,16 +279,17 @@ def files_in_source(path, filenames=""):
     return [item[1] for item in found[:MAX_FILES_PER_SOURCE]]
 
 
-def parse_file_cached(file, src):
-    """Reparse only when an SMB log file changes, keeping 2-second polls inexpensive."""
+def parse_file_cached(file, src, operation_mappings=()):
+    """Reparse only when an SMB log file or its operation mapping changes."""
     stat = file.stat()
-    cache_key = (str(file), src.get("name"), src["persistence"], src.get("startup", "auto"))
+    mapping_key = tuple((item["name"], item["action"]) for item in operation_mappings)
+    cache_key = (str(file), src.get("name"), src["persistence"], src.get("startup", "auto"), mapping_key)
     signature = (stat.st_mtime_ns, stat.st_size)
     with FILE_CACHE_LOCK:
         cached = FILE_CACHE.get(cache_key)
         if cached and cached[:2] == signature:
             return cached[2]
-    parsed = extract_events(read_log(file), src, file.name)
+    parsed = extract_events(read_log(file), src, file.name, operation_mappings)
     with FILE_CACHE_LOCK:
         if len(FILE_CACHE) > 1500:
             FILE_CACHE.clear()
@@ -241,6 +301,8 @@ def scan_all():
     with CONFIG_LOCK:
         sources = [dict(s) for s in CONFIG.get("sources", [])]
         overrides = dict(CONFIG.get("overrides", {}))
+        operation_mappings = [dict(item) for item in CONFIG.get("operations", [])
+                              if isinstance(item, dict) and "name" in item and "action" in item]
     records, statuses, warnings = [], [], []
     seen = set()
     for src in sources:
@@ -258,7 +320,7 @@ def scan_all():
             status["ok"] = True
             for file in paths:
                 try:
-                    parsed = parse_file_cached(file, src)
+                    parsed = parse_file_cached(file, src, operation_mappings)
                     for original_event in parsed:
                         event = dict(original_event)  # overrides must not mutate cached parse results
                         if event["id"] in seen:
@@ -333,7 +395,9 @@ def compute_data(operation="all", window=50):
     return {
         "generated_utc": datetime.now(timezone.utc).isoformat(),
         "total_requests": len(records),
-        "operations": sorted({r["operation"] for r in records}),
+        "operations": sorted({r["operation"] for r in records} |
+                             {item["name"] for item in CONFIG.get("operations", [])
+                              if isinstance(item, dict) and "name" in item}),
         "selected_operation": operation, "window": window,
         "groups": groups, "recent": filtered[:50],
         "sources": statuses, "warnings": warnings,
@@ -375,6 +439,9 @@ class Handler(BaseHTTPRequestHandler):
         elif url.path == "/api/config":
             with CONFIG_LOCK:
                 self.send_json({"sources": CONFIG.get("sources", [])})
+        elif url.path == "/api/operations":
+            with CONFIG_LOCK:
+                self.send_json({"operations": CONFIG.get("operations", [])})
         elif url.path == "/api/data":
             args = parse_qs(url.query)
             operation = args.get("operation", ["all"])[0]
@@ -471,6 +538,12 @@ class Handler(BaseHTTPRequestHandler):
                     CONFIG["sources"] = cleaned
                 save_config()
                 self.send_json({"ok": True})
+            elif self.path == "/api/operations":
+                operations = validate_operation_mappings(payload.get("operations"))
+                with CONFIG_LOCK:
+                    CONFIG["operations"] = operations
+                save_config()
+                self.send_json({"ok": True, "operations": operations})
             elif self.path == "/api/override":
                 event_id = str(payload.get("id", ""))
                 startup = payload.get("startup")

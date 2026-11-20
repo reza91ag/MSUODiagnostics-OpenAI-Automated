@@ -123,6 +123,88 @@ Request Lifecycle Completed succesfully! | TimeNow: 2026-11-20 12:00:02.000 | Fi
                 server.CONFIG = original
                 server.invalidate_cache()
 
+    def test_signup_recognized_from_logic_node_without_metadata(self):
+        text = """WATCHDOG SNAPSHOT - 2026-11-20 12:00:02.000 UTC
+FULL LOGS
+Kernel Authenticating Application License... | TimeNow: 2026-11-20 12:00:00.000 | File: BaseEntity.cs
+Logic Node SignUP discovered at 42.Now Executing... | TimeNow: 2026-11-20 12:00:00.010 | File: OrchestrationEngine.cs
+Request Lifecycle Completed succesfully! | TimeNow: 2026-11-20 12:00:02.000 | File: BaseEntity.cs
+"""
+        source = {"path": "test", "persistence": "direct", "startup": "auto"}
+        events = server.extract_events(text, source, "test.log")
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["operation"], "SignUP")
+
+    def test_signup_custom_name_maps_case_insensitive_metadata_action(self):
+        text = """WATCHDOG SNAPSHOT - 2026-11-20 12:00:02.000 UTC
+FULL LOGS
+Kernel Authenticating Application License... | TimeNow: 2026-11-20 12:00:00.000 | File: BaseEntity.cs
+Metadata SignUP Staged. | TimeNow: 2026-11-20 12:00:00.010 | File: OrchestrationEngine.cs
+Request Lifecycle Completed succesfully! | TimeNow: 2026-11-20 12:00:02.000 | File: BaseEntity.cs
+"""
+        source = {"path": "test", "persistence": "direct", "startup": "auto"}
+        raw = server.extract_events(text, source, "test.log")
+        mapped = server.extract_events(text, source, "test.log",
+                                       [{"name": "Registration", "action": "signup"}])
+        self.assertEqual(raw[0]["operation"], "SignUP")
+        self.assertEqual(mapped[0]["operation"], "Registration")
+        self.assertEqual(raw[0]["id"], mapped[0]["id"])
+
+    def test_custom_literal_log_phrase_for_unknown_operation(self):
+        text = """WATCHDOG SNAPSHOT - 2026-11-20 12:00:02.000 UTC
+FULL LOGS
+Kernel Authenticating Application License... | TimeNow: 2026-11-20 12:00:00.000 | File: BaseEntity.cs
+Routing request to user creation handler. | TimeNow: 2026-11-20 12:00:00.010 | File: User.cs
+Request Lifecycle Completed succesfully! | TimeNow: 2026-11-20 12:00:02.000 | File: BaseEntity.cs
+"""
+        source = {"path": "test", "persistence": "direct", "startup": "auto"}
+        events = server.extract_events(text, source, "test.log",
+                                       [{"name": "SignUP", "action": "user creation handler"}])
+        self.assertEqual(events[0]["operation"], "SignUP")
+
+    def test_custom_operation_validation(self):
+        self.assertEqual(server.validate_operation_mappings([{"name": "SignUP", "action": "SignUp"}]),
+                         [{"name": "SignUP", "action": "SignUp"}])
+        with self.assertRaises(ValueError):
+            server.validate_operation_mappings([{"name": "all", "action": "SignUp"}])
+        with self.assertRaises(ValueError):
+            server.validate_operation_mappings([{"name": "SignUP", "action": "SignUp"},
+                                                {"name": "Registration", "action": "signup"}])
+        with self.assertRaises(ValueError):
+            server.validate_operation_mappings([{"name": "Bad\\nName", "action": "SignUp"}])
+
+    def test_mapping_cache_changes_without_log_file_changes(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "watchdog.log"
+            path.write_text("""WATCHDOG SNAPSHOT - 2026-11-20 12:00:02.000 UTC
+FULL LOGS
+Kernel Authenticating Application License... | TimeNow: 2026-11-20 12:00:00.000 | File: BaseEntity.cs
+Metadata SignUP Staged. | TimeNow: 2026-11-20 12:00:00.010 | File: OrchestrationEngine.cs
+Request Lifecycle Completed succesfully! | TimeNow: 2026-11-20 12:00:02.000 | File: BaseEntity.cs
+""")
+            src = {"name": "Test", "path": temp, "persistence": "direct", "startup": "auto"}
+            original = server.CONFIG
+            try:
+                server.CONFIG = {"sources": [src], "overrides": {},
+                                 "operations": [{"name": "Registration", "action": "SignUP"},
+                                                {"name": "Future operation", "action": "NotYetLogged"}]}
+                server.invalidate_cache()
+                data = server.compute_data("Registration", 50)
+                self.assertIn("Registration", data["operations"])
+                self.assertIn("Future operation", data["operations"])
+                self.assertEqual(data["recent"][0]["operation"], "Registration")
+                self.assertEqual(data["groups"][2]["n"], 1)
+                self.assertEqual(server.compute_data("Future operation", 50)["recent"], [])
+                server.CONFIG["operations"] = [{"name": "SignUP", "action": "SignUP"}]
+                server.invalidate_cache()
+                changed = server.compute_data("SignUP", 50)
+                self.assertEqual(changed["recent"][0]["operation"], "SignUP")
+                self.assertEqual(data["recent"][0]["id"], changed["recent"][0]["id"])
+            finally:
+                server.CONFIG = original
+                server.invalidate_cache()
+
     def test_incomplete_requests_excluded(self):
         text = "Kernel Authenticating Application License... | TimeNow: 2026-11-20 12:00:00.000 | File: BaseEntity.cs\n"
         source = {"path": "test", "persistence": "direct", "startup": "auto"}

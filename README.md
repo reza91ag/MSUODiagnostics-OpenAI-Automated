@@ -26,3 +26,7 @@ Use **Export LaTeX** to download a paste-ready `.tex` section, or **Copy LaTeX**
 ## PDF export and compact export menu
 
 The dashboard header has a single **Export** dropdown (hover on desktop; click or keyboard on other devices). Available actions: **PDF report**, **LaTeX tables**, **Copy LaTeX**, and **CSV (all records)**. PDF and LaTeX respect the selected operation and averaging window. The PDF is generated locally with Python's standard library, includes the MSUO logo, vector latency chart, measurement tables, sources, and recent completed lifecycles. It uses the same fixed provenance sentence as the LaTeX export, with no generated narrative.
+
+## Custom operation mappings
+
+Use **+ Add New Operation** next to the operation filter. Enter a **Dropdown name** (for example `SignUP`) and an **Actual action in log** (for example `SignUp`, `Metadata SignUp Staged`, or a literal logged message fragment). The case-insensitive literal match is applied only within a completed request lifecycle. The mapping is saved in the server's existing `msuo_live_config.json` and appears in the operation dropdown even before any matching requests arrive. Existing mappings can be removed in the same dialog. The parser also recognizes `Logic Node <Action> discovered` as an automatic fallback when a metadata-staged line is absent. An operation with no completed lifecycle cannot produce latency measurements.

@@ -29,6 +29,12 @@ h1{font-size:23px;line-height:1.2;margin:0;color:var(--navy);letter-spacing:-.5p
 .table-wrap{overflow:auto}table{border-collapse:collapse;width:100%;min-width:760px;font-size:12px}th{text-align:left;background:#f4f8fb;color:#57718a;text-transform:uppercase;font-size:10px;letter-spacing:.055em;font-weight:800;padding:12px 17px;border-top:1px solid #e8edf3;border-bottom:1px solid #e8edf3}td{padding:12px 17px;border-bottom:1px solid #edf1f5;font-variant-numeric:tabular-nums}tbody tr:hover{background:#fafcfe}tbody tr:last-child td{border-bottom:0}.muted{color:var(--muted)}.strong{font-weight:750;color:var(--navy)}.good{color:var(--teal)}.bad{color:var(--red)}.pill{font-size:10px;font-weight:750;display:inline-block;padding:3px 7px;border-radius:5px;background:#edf3f8;color:#476a86}.pill.cold{background:#e6eef7}.pill.warm{background:#e2f3ee;color:#197d6d}
 footer{font-size:11px;color:#8294a3;margin-top:18px}.warning{padding:12px 16px;border:1px solid #e8c9b8;background:#fff7f2;border-radius:8px;color:#925c42;margin:0 0 16px;font-size:12px;white-space:pre-wrap}
 dialog{border:0;border-radius:15px;padding:0;width:min(850px,94vw);box-shadow:0 30px 90px rgba(20,40,65,.27);color:var(--text)}dialog::backdrop{background:rgba(12,31,49,.48)}.dialog-head{padding:24px 28px 12px}.dialog-head h2{margin:0;font-size:21px;color:var(--navy)}.dialog-head p{color:var(--muted);font-size:12px;margin:5px 0}.dialog-body{padding:0 28px 22px;max-height:60vh;overflow:auto}.source-card{border:1px solid var(--line);padding:13px;border-radius:10px;margin:11px 0;background:#f9fbfd}.source-grid{display:grid;grid-template-columns:1fr 1.3fr 1fr 1fr auto;gap:9px;align-items:end}.source-grid label{display:block;color:var(--muted);font-size:10px;font-weight:750;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px}.source-grid input,.source-grid select{width:100%;border:1px solid #d5e0e9;border-radius:6px;padding:9px;background:white;font-size:12px}.source-grid .path-input{font-family:Consolas,monospace}.source-grid .filename-field{grid-column:1/-2}.dialog-actions{padding:15px 28px 23px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px}.remove{background:transparent;color:#a85050;border:0;font-size:19px;padding:7px}.tip{font-size:11px;color:var(--muted)}.inline-select{font-size:11px;border:1px solid #d5e0e9;border-radius:5px;padding:5px;background:white;color:var(--navy)}.loading{opacity:.65}
+.operation-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+.operation-fields label{display:block;font-size:11px;font-weight:750;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.operation-fields input{width:100%;border:1px solid #d5e0e9;border-radius:7px;padding:10px;color:var(--navy)}
+.operation-list{margin:12px 0}.operation-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;margin:6px 0;background:#f9fbfd}
+.operation-item code{font-size:11px;color:var(--muted);overflow-wrap:anywhere}.operation-item strong{display:block;font-size:12px}
+@media(max-width:600px){.operation-fields{grid-template-columns:1fr}}
 @media(max-width:1000px){.metrics{grid-template-columns:repeat(2,1fr)}.source-grid{grid-template-columns:1fr 1fr}.source-grid .filename-field{grid-column:1/-1}.shell{padding:16px 15px 40px}}@media(max-width:600px){.metrics{grid-template-columns:1fr 1fr}.metric{padding:12px}.metric strong{font-size:22px}header{align-items:start;flex-direction:column}.panel-head{padding:17px 16px 8px}.chart-wrap{padding:5px 9px}.controls{padding:12px}.source-grid{grid-template-columns:1fr}}
 </style>
 </head>
@@ -41,7 +47,7 @@ dialog{border:0;border-radius:15px;padding:0;width:min(850px,94vw);box-shadow:0 
   <div id="warnings"></div>
   <section class="controls">
     <div class="control-group">
-      <div class="control"><label for="operation">Operation</label><select id="operation"><option value="all">All operations</option></select></div>
+      <div class="control"><label for="operation">Operation</label><select id="operation"><option value="all">All operations</option></select></div><div class="control" style="justify-content:end"><button class="button" id="addOperationBtn" type="button">+ Add New Operation</button></div>
       <div class="control"><label for="window">Average window</label><select id="window"><option value="10">Last 10</option><option value="20">Last 20</option><option value="50" selected>Last 50</option><option value="100">Last 100</option><option value="500">Last 500</option><option value="0">All requests</option></select></div>
       <div class="control"><label for="sort">Descending by</label><select id="sort"><option value="latest">Momentary request</option><option value="mean">Average latency</option></select></div>
       <div class="control"><label for="display">Diagram</label><select id="display"><option value="both">Momentary + average</option><option value="latest">Momentary only</option><option value="mean">Average only</option></select></div>
@@ -70,9 +76,10 @@ dialog{border:0;border-radius:15px;padding:0;width:min(850px,94vw);box-shadow:0 
   <footer>Local-only dashboard (127.0.0.1). No telemetry is uploaded. For reproducible experiments, compare identical operations and separately measure durable persistence completion.</footer>
 </div>
 <dialog id="sourcesDialog"><div class="dialog-head"><h2>Connect WatchDog log folders</h2><p>Connect Tailscale in Windows first. Paste the mapped drive or SMB share path here; the local console reads it using your existing Windows access.</p></div><div class="dialog-body"><div id="sourceRows"></div><button class="button" id="addSource">+ Add folder</button><p class="tip">Example: <code>\\100.x.x.x\OptiSpec-Diagnostics</code> or <code>Z:\Logs</code>. Specify exact log filename(s), separated by commas, to read only those files (extensionless names work). Leave blank for automatic discovery. Persistence is assigned per source, not guessed from elapsed time. Auto startup: constructor captured = cold; otherwise warm (heuristic). You can override individual requests in the table.</p></div><div class="dialog-actions"><span class="tip" id="saveMessage"></span><div class="row"><button class="button" id="cancelSources">Cancel</button><button class="button primary" id="saveSources">Save and monitor</button></div></div></dialog>
+<dialog id="operationsDialog"><div class="dialog-head"><h2>Add New Operation</h2><p>Give an operation a dropdown name and the action text found in its WatchDog log. Matching is case-insensitive and restricted to completed lifecycles.</p></div><div class="dialog-body"><div class="operation-fields"><div><label for="newOperationName">Dropdown name</label><input id="newOperationName" maxlength="80" placeholder="SignUP" autocomplete="off"></div><div><label for="newOperationAction">Actual action in log</label><input id="newOperationAction" maxlength="200" placeholder="SignUp or Metadata SignUp Staged" autocomplete="off"></div></div><p class="tip">Enter an action token or a literal log message fragment. Existing mappings can be removed below.</p><div id="operationMappings" class="operation-list"></div></div><div class="dialog-actions"><span class="tip" id="operationMessage"></span><div class="row"><button class="button" id="cancelOperations" type="button">Cancel</button><button class="button primary" id="saveOperations" type="button">Save operations</button></div></div></dialog>
 <script>
 const $ = id => document.getElementById(id);
-let data = null, config = {sources:[]}, busy = false;
+let data = null, config = {sources:[]}, busy = false, customOperations = [];
 const NS='http://www.w3.org/2000/svg';
 const num = v => v == null ? '—' : Number(v).toLocaleString('en-US',{maximumFractionDigits:1});
 const ms = v => v == null ? '—' : `${num(v)} ms`;
@@ -126,8 +133,42 @@ function makeSourceRow(source={name:'',path:'',persistence:'direct',startup:'aut
  for(const [label,key,type] of fields){const wrap=dom('div'),lab=dom('label',label);wrap.append(lab);let input;if(type==='select'){input=dom('select');const opts=key==='persistence'?[['direct','Direct cloud'],['offline','Offline-first']]:[['auto','Auto-detect'],['cold','Cold (override)'],['warm','Warm (override)']];for(const [v,t] of opts){const o=dom('option',t);o.value=v;input.append(o);}}else{input=dom('input');input.type='text';if(key==='path')input.className='path-input';if(key==='filenames'){wrap.className='filename-field';input.className='path-input';input.placeholder='Watchdog-Log-Public, other-log';}}input.dataset.key=key;input.value=source[key]??'';wrap.append(input);grid.append(wrap);}
  const remove=dom('button','×','remove');remove.title='Remove source';remove.onclick=()=>card.remove();grid.append(remove);card.append(grid);$('sourceRows').append(card);
 }
+function renderOperationMappings(){
+ const list=$('operationMappings');list.replaceChildren();
+ for(const [i,operation] of customOperations.entries()){
+  const item=dom('div','','operation-item'),details=dom('div');
+  const name=dom('strong',operation.name),action=dom('code',operation.action);
+  details.append(name,action);
+  const remove=dom('button','Remove','button');
+  remove.type='button';remove.onclick=()=>{customOperations.splice(i,1);renderOperationMappings();};
+  item.append(details,remove);list.append(item);
+ }
+}
+async function openOperations(){
+ try{
+  const resp=await fetch('/api/operations',{cache:'no-store'});
+  if(!resp.ok)throw Error('Could not load operations');
+  customOperations=(await resp.json()).operations.map(item=>({...item}));
+  $('newOperationName').value='';$('newOperationAction').value='';$('operationMessage').textContent='';
+  renderOperationMappings();$('operationsDialog').showModal();$('newOperationName').focus();
+ }catch(e){alert(e.message);}
+}
+async function saveOperations(){
+ const name=$('newOperationName').value.trim(),action=$('newOperationAction').value.trim();
+ if(Boolean(name)!==Boolean(action)){$('operationMessage').textContent='Enter both the dropdown name and the actual log action.';return;}
+ const updated=[...customOperations];
+ if(name&&action)updated.push({name,action});
+ try{
+  const resp=await fetch('/api/operations',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({operations:updated})});
+  const body=await resp.json();
+  if(!resp.ok)throw Error(body.error||'Could not save operations');
+  $('operationsDialog').close();await refresh();
+  if(name){$('operation').value=name;syncExportLinks();await refresh();}
+ }catch(e){$('operationMessage').textContent=e.message;}
+}
 async function openSources(){const res=await fetch('/api/config');config=await res.json();$('sourceRows').replaceChildren();for(const source of config.sources)makeSourceRow(source);if(!config.sources.length)makeSourceRow();$('saveMessage').textContent='';$('sourcesDialog').showModal();}
 async function saveSources(){const sources=[];for(const row of $('sourceRows').children){const s={};for(const field of row.querySelectorAll('[data-key]'))s[field.dataset.key]=field.value.trim();if(!s.path&&!s.name)continue;if(!s.name)s.name=`Source ${sources.length+1}`;sources.push(s);}try{const resp=await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sources})});const body=await resp.json();if(!resp.ok)throw Error(body.error);$('sourcesDialog').close();await refresh();}catch(e){$('saveMessage').textContent=e.message;}}
+$('addOperationBtn').onclick=openOperations;$('saveOperations').onclick=saveOperations;$('cancelOperations').onclick=()=>$('operationsDialog').close();
 $('sourcesBtn').onclick=openSources;$('addSource').onclick=()=>makeSourceRow();$('saveSources').onclick=saveSources;$('cancelSources').onclick=()=>$('sourcesDialog').close();$('refreshBtn').onclick=refresh;
 $('copyLatex').onclick=async()=>{const btn=$('copyLatex');try{const resp=await fetch(latexUrl(),{cache:'no-store'});if(!resp.ok)throw Error('LaTeX export failed');await navigator.clipboard.writeText(await resp.text());btn.textContent='Copied';setTimeout(()=>btn.textContent='Copy LaTeX',1500);}catch(e){alert(e.message);}};
 const exportMenu=$('exportMenu');
