@@ -33,6 +33,7 @@ TIME_PATTERN = re.compile(r"TimeNow:\s*(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{
 SNAPSHOT_PATTERN = re.compile(r"(?=WATCHDOG SNAPSHOT\s*-\s*\d{4}-\d{2}-\d{2})")
 OPERATION_PATTERN = re.compile(r"Metadata\s+([\w-]+)\s+Staged", re.IGNORECASE)
 LOG_EXTENSIONS = {".txt", ".log", ".trace", ".out"}
+LOG_FILENAMES = {"watchdog-log-public"}  # WatchDog writes an extensionless production log
 CONFIG_LOCK = threading.RLock()
 CACHE_LOCK = threading.Lock()
 CACHE = {"at": 0.0, "records": [], "sources": [], "warnings": []}
@@ -196,7 +197,7 @@ def files_in_source(path):
     for base, folders, files in os.walk(path, followlinks=False):
         folders[:] = [x for x in folders if not x.startswith(".")]
         for name in files:
-            if Path(name).suffix.lower() in LOG_EXTENSIONS:
+            if Path(name).suffix.lower() in LOG_EXTENSIONS or name.lower() in LOG_FILENAMES:
                 candidate = Path(base) / name
                 try:
                     found.append((candidate.stat().st_mtime, candidate))
