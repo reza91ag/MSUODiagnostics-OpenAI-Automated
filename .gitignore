@@ -1,0 +1,14 @@
+# Never commit server-specific WatchDog paths or overrides.
+msuo_live_config.json
+msuo_live_config.json.tmp
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+*.log
+*.trace
+*.out
+diagnostics/
+production_logs/
