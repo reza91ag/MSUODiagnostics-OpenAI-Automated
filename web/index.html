@@ -119,7 +119,7 @@ function renderChart(groups){
    if(display!=='both')entries=entries.filter(([key])=>key===(display==='latest'?'latest_ms':'mean_ms')).map(([key,,color,label])=>[key,y+21,color,label]);
    for(const [key,barY,color,label] of entries){const value=g[key];const width=value/maxAxis*plotW;const rect=node('rect',{x:left,y:barY,width:Math.max(1,width),height:25,rx:1,fill:color});rect.append(node('title',{},`${g.label} • ${label}: ${ms(value)}`));svg.append(rect);const tx=Math.min(left+width+10,W-92);svg.append(node('text',{x:tx,y:barY+18,class:'value-label'},ms(value)));}
    // Show the actual minimum in the selected window, not the most recent sample.
-   if(g.fastest_ms!=null){const markerX=left+g.fastest_ms/maxAxis*plotW;const markerY=y+3;svg.append(node('line',{x1:markerX,x2:markerX,y1:markerY-5,y2:markerY+33,stroke:'#138b82','stroke-width':4}));svg.append(node('text',{x:Math.max(left+8,Math.min(markerX+9,W-160)),y:y+62,class:'value-label',fill:'#138b82'},`Fastest ${ms(g.fastest_ms)}`));}
+   if(g.fastest_ms!=null){const markerX=left+g.fastest_ms/maxAxis*plotW;const markerY=y+3;svg.append(node('line',{x1:markerX,x2:markerX,y1:markerY-5,y2:markerY+33,stroke:'#138b82','stroke-width':4}));svg.append(node('text',{x:left+4,y:y+58,class:'value-label',fill:'#138b82'},`Fastest ${ms(g.fastest_ms)}`));}
    const delta=g.n<2?'Divergence: insufficient samples':`Divergence: ${divergence(g)}    •    n = ${g.n}`;
    svg.append(node('text',{x:left+3,y:y+83,class:'delta-label'},delta));
  });
