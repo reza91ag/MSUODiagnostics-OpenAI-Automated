@@ -1,0 +1,82 @@
+========================================
+   WATCHDOG SNAPSHOT - 2026-11-20 12:05:46.578 UTC
+========================================
+Scenario:
+Metadata:
+
+--- LAST CAPTURED POINT ---
+Commit: GitAutomation_Failed/
+Class: <Finalization>d__27
+Method: Finalization
+File: BaseEntity.cs
+Line: 312
+TimeNow: 2026-11-20 12:05:46.575
+
+========================================
+              FULL LOGS
+========================================
+[EMPIRICAL GIT BALANCING] Lines Added Since Last Build: 0
+[EMPIRICAL GIT BALANCING] Lines Deleted Since Last Build: 0
+[EMPIRICAL GIT BALANCING] Total Code Mutation Volume: 0 rows altered.
+Kernel Authenticating Application License... | TimeNow: 2026-11-20 12:05:43.640 | File: BaseEntity.cs | Class: <Ingest>d__22 | Method: Ingest | Line: 117
+Awaiting Payload Extraction... | TimeNow: 2026-11-20 12:05:43.651 | File: BaseEntity.cs | Class: <Staging>d__24 | Method: Staging | Line: 165
+Payload extracted successfully... | TimeNow: 2026-11-20 12:05:43.651 | File: MSUOTools.cs | Class: <ExtractPayload>d__1 | Method: ExtractPayload | Line: 1503
+Header extracted successfully. Returning Header to Base Entity | TimeNow: 2026-11-20 12:05:43.651 | File: MSUOTools.cs | Class: ContextTools | Method: ExtractHeader | Line: 1467
+No components pending dependency resolution. Creating new pipeline... | TimeNow: 2026-11-20 12:05:43.651 | File: BaseEntity.cs | Class: <Staging>d__24 | Method: Staging | Line: 189
+I am riding on the DUP itself LOL! | TimeNow: 2026-11-20 12:05:43.652 | File: BaseEntity.cs | Class: <Staging>d__24 | Method: Staging | Line: 206
+Metadata UpdateDashboard Staged. Now asking for Logic Discovery... | TimeNow: 2026-11-20 12:05:43.652 | File: OrchestrationEngine.cs | Class: <Orchestrate>d__3 | Method: Orchestrate | Line: 40
+Logic Node UpdateDashboard discovered at 16987199.Now Executing... | TimeNow: 2026-11-20 12:05:43.652 | File: OrchestrationEngine.cs | Class: <Orchestrate>d__3 | Method: Orchestrate | Line: 46
+OptiSpec/UpdateDashboard: Resolving dashboard update request. | TimeNow: 2026-11-20 12:05:43.652 | File: OptiSpec.cs | Class: <process>d__3 | Method: process | Line: 934
+OptiSpec/UpdateDashboard: User validated successfully. | TimeNow: 2026-11-20 12:05:45.380 | File: OptiSpec.cs | Class: <process>d__3 | Method: process | Line: 938
+OptiSpec/UpdateDashboard: Resolving dashboard update command. | TimeNow: 2026-11-20 12:05:46.574 | File: OptiSpec.cs | Class: <process>d__3 | Method: process | Line: 944
+OptiSpec/UpdateDashboard: Resolving dashboard data for response. | TimeNow: 2026-11-20 12:05:46.575 | File: OptiSpec.cs | Class: <process>d__3 | Method: process | Line: 965
+OptiSpec/UpdateDashboard: Dashboard data resolved successfully. | TimeNow: 2026-11-20 12:05:46.575 | File: OptiSpec.cs | Class: <process>d__3 | Method: process | Line: 972
+Finalizing request lifecycle... | TimeNow: 2026-11-20 12:05:46.575 | File: BaseEntity.cs | Class: <Finalization>d__27 | Method: Finalization | Line: 292
+Responding to frontend... | TimeNow: 2026-11-20 12:05:46.575 | File: BaseEntity.cs | Class: <Finalization>d__27 | Method: Finalization | Line: 305
+Request Lifecycle Completed succesfully! | TimeNow: 2026-11-20 12:05:46.575 | File: BaseEntity.cs | Class: <Finalization>d__27 | Method: Finalization | Line: 312
+
+################################################################################
+
+========================================
+   WATCHDOG SNAPSHOT - 2026-11-20 12:14:01.962 UTC
+========================================
+Scenario:
+Metadata:
+
+--- LAST CAPTURED POINT ---
+Commit: GitAutomation_Failed/
+Class: <Finalization>d__27
+Method: Finalization
+File: BaseEntity.cs
+Line: 312
+TimeNow: 2026-11-20 12:14:01.962
+
+========================================
+              FULL LOGS
+========================================
+[EMPIRICAL GIT BALANCING] Lines Added Since Last Build: 0
+[EMPIRICAL GIT BALANCING] Lines Deleted Since Last Build: 0
+[EMPIRICAL GIT BALANCING] Total Code Mutation Volume: 0 rows altered.
+Kernel Authenticating Application License... | TimeNow: 2026-11-20 12:13:59.809 | File: BaseEntity.cs | Class: <Ingest>d__22 | Method: Ingest | Line: 117
+Awaiting Payload Extraction... | TimeNow: 2026-11-20 12:13:59.809 | File: BaseEntity.cs | Class: <Staging>d__24 | Method: Staging | Line: 165
+Payload extracted successfully... | TimeNow: 2026-11-20 12:13:59.809 | File: MSUOTools.cs | Class: <ExtractPayload>d__1 | Method: ExtractPayload | Line: 1503
+Header extracted successfully. Returning Header to Base Entity | TimeNow: 2026-11-20 12:13:59.809 | File: MSUOTools.cs | Class: ContextTools | Method: ExtractHeader | Line: 1467
+No components pending dependency resolution. Creating new pipeline... | TimeNow: 2026-11-20 12:13:59.809 | File: BaseEntity.cs | Class: <Staging>d__24 | Method: Staging | Line: 189
+I am riding on the DUP itself LOL! | TimeNow: 2026-11-20 12:13:59.809 | File: BaseEntity.cs | Class: <Staging>d__24 | Method: Staging | Line: 206
+Metadata UpdateDashboard Staged. Now asking for Logic Discovery... | TimeNow: 2026-11-20 12:13:59.809 | File: OrchestrationEngine.cs | Class: <Orchestrate>d__3 | Method: Orchestrate | Line: 40
+Logic Node UpdateDashboard discovered at 16987199.Now Executing... | TimeNow: 2026-11-20 12:13:59.809 | File: OrchestrationEngine.cs | Class: <Orchestrate>d__3 | Method: Orchestrate | Line: 46
+OptiSpec/UpdateDashboard: Resolving dashboard update request. | TimeNow: 2026-11-20 12:13:59.809 | File: OptiSpec.cs | Class: <process>d__3 | Method: process | Line: 934
+OptiSpec/UpdateDashboard: User validated successfully. | TimeNow: 2026-11-20 12:14:00.829 | File: OptiSpec.cs | Class: <process>d__3 | Method: process | Line: 938
+OptiSpec/UpdateDashboard: Resolving dashboard update command. | TimeNow: 2026-11-20 12:14:01.959 | File: OptiSpec.cs | Class: <process>d__3 | Method: process | Line: 944
+OptiSpec/UpdateDashboard: Adding or replacing dashboard data. | TimeNow: 2026-11-20 12:14:01.959 | File: OptiSpec.cs | Class: <process>d__3 | Method: process | Line: 947
+OptiSpec/UpdateDashboard: Calculating updated dashboard table. | TimeNow: 2026-11-20 12:14:01.961 | File: OptiSpec.cs | Class: <process>d__3 | Method: process | Line: 950
+OptiSpec/UpdateDashboard: Persisting updated dashboard data. | TimeNow: 2026-11-20 12:14:01.961 | File: OptiSpec.cs | Class: <process>d__3 | Method: process | Line: 952
+Resolving DUP persistence route... | TimeNow: 2026-11-20 12:14:01.961 | File: Infrastructure.cs | Class: <Persist>d__2 | Method: Persist | Line: 142
+Database Credentials fetched successfully. Creating db Client... | TimeNow: 2026-11-20 12:14:01.961 | File: Infrastructure.cs | Class: <Persist>d__2 | Method: Persist | Line: 156
+OptiSpec/UpdateDashboard: Resolving dashboard data for response. | TimeNow: 2026-11-20 12:14:01.962 | File: OptiSpec.cs | Class: <process>d__3 | Method: process | Line: 965
+OptiSpec/UpdateDashboard: Dashboard data resolved successfully. | TimeNow: 2026-11-20 12:14:01.962 | File: OptiSpec.cs | Class: <process>d__3 | Method: process | Line: 972
+Finalizing request lifecycle... | TimeNow: 2026-11-20 12:14:01.962 | File: BaseEntity.cs | Class: <Finalization>d__27 | Method: Finalization | Line: 292
+Responding to frontend... | TimeNow: 2026-11-20 12:14:01.962 | File: BaseEntity.cs | Class: <Finalization>d__27 | Method: Finalization | Line: 305
+Request Lifecycle Completed succesfully! | TimeNow: 2026-11-20 12:14:01.962 | File: BaseEntity.cs | Class: <Finalization>d__27 | Method: Finalization | Line: 312
+
+################################################################################
