@@ -8,7 +8,7 @@ The application source, parser tests, and Windows deployment workflow are commit
 
 ## Local application
 
-The application uses Python 3.10+ and runs locally on `127.0.0.1:8765`. Configure the two local WatchDog log directories in the dashboard. Keep production log files, credentials, configuration containing internal paths, and VPN secrets out of Git.
+The application uses Python 3.10+ and runs locally on `127.0.0.1:8765`. Configure the two local WatchDog log directories in the dashboard. Each source also has an optional **Log filename(s)** field: enter one or more exact filenames separated by commas (for example, `Watchdog-Log-Public`), including names without extensions. Leaving it blank uses automatic log discovery. Keep production log files, credentials, configuration containing internal paths, and VPN secrets out of Git.
 
 ## Deployment plan
 

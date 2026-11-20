@@ -190,14 +190,21 @@ def read_log(path):
         return f.read().decode("utf-8-sig", errors="replace")
 
 
-def files_in_source(path):
+def files_in_source(path, filenames=""):
+    """Discover supported logs, or exact comma-separated filenames when configured."""
+    selected = {name.strip().casefold() for name in filenames.split(",") if name.strip()}
     if path.is_file():
-        return [path]
+        return [path] if not selected or path.name.casefold() in selected else []
     found = []
     for base, folders, files in os.walk(path, followlinks=False):
         folders[:] = [x for x in folders if not x.startswith(".")]
         for name in files:
-            if Path(name).suffix.lower() in LOG_EXTENSIONS or name.lower() in LOG_FILENAMES:
+            if selected:
+                matches = name.casefold() in selected
+            else:
+                matches = (Path(name).suffix.lower() in LOG_EXTENSIONS
+                           or name.casefold() in LOG_FILENAMES)
+            if matches:
                 candidate = Path(base) / name
                 try:
                     found.append((candidate.stat().st_mtime, candidate))
@@ -242,7 +249,7 @@ def scan_all():
             statuses.append(status)
             continue
         try:
-            paths = files_in_source(path)
+            paths = files_in_source(path, src.get("filenames", ""))
             status["files"] = len(paths)
             status["ok"] = True
             for file in paths:
@@ -405,10 +412,21 @@ class Handler(BaseHTTPRequestHandler):
                     path = str(src.get("path", "")).strip().strip('"')
                     persistence = src.get("persistence", "")
                     startup = src.get("startup", "auto")
+                    filenames = src.get("filenames", "")
                     if not path or persistence not in VALID_PERSISTENCE or startup not in VALID_STARTUP:
                         raise ValueError(f"Source {i+1}: path, persistence, or startup invalid")
+                    if not isinstance(filenames, str) or len(filenames) > 2000:
+                        raise ValueError(f"Source {i+1}: invalid log filenames")
+                    selected = [name.strip() for name in filenames.split(",") if name.strip()]
+                    if len(selected) > 20 or any(
+                        name in (".", "..") or len(name) > 255
+                        or any(char in name for char in '<>:"/\\|?*')
+                        for name in selected
+                    ):
+                        raise ValueError(f"Source {i+1}: enter up to 20 plain filenames, separated by commas")
                     cleaned.append({"name": str(src.get("name", "Source"))[:80],
-                                    "path": path, "persistence": persistence, "startup": startup})
+                                    "path": path, "persistence": persistence, "startup": startup,
+                                    "filenames": ", ".join(selected)})
                 with CONFIG_LOCK:
                     CONFIG["sources"] = cleaned
                 save_config()

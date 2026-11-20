@@ -89,6 +89,40 @@ Request Lifecycle Completed succesfully! | TimeNow: 2026-11-20 12:00:02.000 | Fi
             target.write_text("WATCHDOG SNAPSHOT - 2026-11-20 12:00:00.000 UTC\n", encoding="utf-8")
             self.assertEqual(server.files_in_source(folder), [target])
 
+    def test_configurable_extensionless_log_filenames(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp)
+            names = ("Watchdog-Log-Public", "Watchdog-Log-Debug", "unrelated.log")
+            for name in names:
+                (folder / name).write_text("sample", encoding="utf-8")
+            self.assertEqual(server.files_in_source(folder, "Watchdog-Log-Public"),
+                             [folder / "Watchdog-Log-Public"])
+            self.assertEqual(server.files_in_source(folder, "watchdog-log-public"),
+                             [folder / "Watchdog-Log-Public"])
+            self.assertEqual(set(server.files_in_source(folder, "Watchdog-Log-Public, Watchdog-Log-Debug")),
+                             {folder / "Watchdog-Log-Public", folder / "Watchdog-Log-Debug"})
+            self.assertEqual(server.files_in_source(folder, "nonexistent"), [])
+
+    def test_source_config_applies_filename_filter(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp)
+            (folder / "Watchdog-Log-Public").write_text("sample", encoding="utf-8")
+            (folder / "Watchdog-Log-Debug").write_text("sample", encoding="utf-8")
+            original = server.CONFIG
+            try:
+                server.CONFIG = {"sources": [{
+                    "name": "Selected", "path": temp, "persistence": "direct",
+                    "startup": "auto", "filenames": "Watchdog-Log-Debug",
+                }], "overrides": {}}
+                server.invalidate_cache()
+                _, statuses, _ = server.scan_all()
+                self.assertEqual(statuses[0]["files"], 1)
+            finally:
+                server.CONFIG = original
+                server.invalidate_cache()
+
     def test_incomplete_requests_excluded(self):
         text = "Kernel Authenticating Application License... | TimeNow: 2026-11-20 12:00:00.000 | File: BaseEntity.cs\n"
         source = {"path": "test", "persistence": "direct", "startup": "auto"}
