@@ -58,7 +58,7 @@ dialog{border:0;border-radius:15px;padding:0;width:min(850px,94vw);box-shadow:0 
     <div class="row"><span class="muted" style="font-size:12px">Auto-refresh every 2 seconds</span><button class="button" id="refreshBtn">Refresh now</button></div>
   </section>
   <section class="metrics">
-    <div class="metric"><small>Completed requests</small><strong id="total">—</strong><span class="hint">Unique WatchDog lifecycles</span></div>
+    <div class="metric"><small id="totalLabel">Completed requests</small><strong id="total">—</strong><span class="hint" id="totalHint">Unique WatchDog lifecycles across all operations</span></div>
     <div class="metric"><small>Fastest momentary</small><strong id="fastest">—</strong><span class="hint" id="fastestLabel">Awaiting samples</span></div>
     <div class="metric"><small>Monitored sources</small><strong id="sources">—</strong><span class="hint" id="sourcesHint">UNC / mapped folders</span></div>
     <div class="metric"><small>Last scan</small><strong id="lastScan" style="font-size:22px">—</strong><span class="hint">Times shown in local browser time</span></div>
@@ -136,7 +136,7 @@ function renderRecent(records){const tbody=$('recentBody');tbody.replaceChildren
  }
 }
 function updateOps(ops){const select=$('operation'),previous=select.value;select.replaceChildren();const all=dom('option','All operations');all.value='all';select.append(all);for(const name of ops){const opt=dom('option',name);opt.value=name;select.append(opt);}select.value=ops.includes(previous)?previous:'all';}
-function render(d){data=d;syncExportLinks();const groups=d.groups;const available=groups.filter(g=>g.n);$('total').textContent=num(d.total_requests);$('sources').textContent=`${d.sources.filter(s=>s.ok).length} / ${d.sources.length}`;$('sourcesHint').textContent=`${d.sources.reduce((a,s)=>a+s.files,0)} log files accessible`;
+function render(d){data=d;syncExportLinks();const groups=d.groups;const available=groups.filter(g=>g.n);$('total').textContent=num(d.selected_operation==='all'?d.total_requests:d.operation_requests);$('totalLabel').textContent=d.selected_operation==='all'?'Completed requests':'Operation entries';$('totalHint').textContent=d.selected_operation==='all'?'Unique WatchDog lifecycles across all operations':`Total completed lifecycles for ${d.selected_operation} (all history, independent of average window)`;$('sources').textContent=`${d.sources.filter(s=>s.ok).length} / ${d.sources.length}`;$('sourcesHint').textContent=`${d.sources.reduce((a,s)=>a+s.files,0)} log files accessible`;
  if(available.length){const best=[...available].sort((a,b)=>a.fastest_ms-b.fastest_ms)[0];$('fastest').textContent=ms(best.fastest_ms);$('fastestLabel').textContent=best.label;}else{$('fastest').textContent='—';$('fastestLabel').textContent='Awaiting samples';}
  $('lastScan').textContent=new Date(d.generated_utc).toLocaleTimeString();const ok=d.sources.some(s=>s.ok);$('status').innerHTML=`<span class="dot ${ok?'':'bad'}"></span><span>${ok?'Monitoring live':'No connected source'}</span>`;
  const warn=d.warnings.slice(0,5);$('warnings').replaceChildren();if(warn.length){const w=dom('div',warn.join('\n'),'warning');$('warnings').append(w);}
