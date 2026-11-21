@@ -76,6 +76,26 @@ class WatchDogParserTests(unittest.TestCase):
             server.CONFIG = original
             server.invalidate_cache()
 
+    def test_latency_health_states_and_operation_localization(self):
+        from datetime import datetime, timedelta, timezone
+        def samples(operations, excluded):
+            start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+            rows = [{"id": str(i), "operation": op,
+                     "end_utc": (start + timedelta(seconds=i)).isoformat()}
+                    for i, op in enumerate(operations)]
+            return server.latency_health(rows, {str(i) for i in excluded})
+        self.assertEqual(samples(["A"] * 30, [])["status"], "healthy")
+        self.assertEqual(samples(["A"] * 30, [2, 13, 27])["status"], "sporadic")
+        temporal = samples(["A"] * 30, [15, 16, 18])
+        self.assertEqual(temporal["status"], "localized")
+        self.assertTrue(temporal["temporal_cluster"])
+        operational = samples(["A" if i % 2 == 0 else "B" for i in range(30)],
+                              [0, 6, 12, 18])
+        self.assertEqual(operational["status"], "localized")
+        self.assertTrue(operational["operational_cluster"])
+        self.assertFalse(operational["temporal_cluster"])
+        self.assertEqual(operational["affected_operations"][0]["operation"], "A")
+
     def test_outlier_toggle_changes_statistics(self):
         samples = [{"duration_ms": v} for v in (50, 55, 60, 65, 70, 75, 80, 90, 1000)]
         included, excluded = server.remove_latency_outliers(samples)
