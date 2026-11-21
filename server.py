@@ -367,6 +367,9 @@ def scan_all():
                         if override in {"cold", "warm"}:
                             event["startup"] = override
                             event["startup_evidence"] = "Per-request reviewer override"
+                        # Read is a startup-internal action, not a standalone benchmark sample.
+                        if event["operation"].casefold() == "updatedashboard read":
+                            continue
                         records.append(event)
                         status["requests"] += 1
                 except (OSError, UnicodeError) as exc:
@@ -400,10 +403,11 @@ def percentile(values, q):
 
 def available_operations(records, custom_mappings=()):
     """Built-in SignUp and SignIn first; then observed/custom actions alphabetically."""
-    choices = {record["operation"] for record in records}
+    choices = {record["operation"] for record in records
+               if record["operation"].casefold() != "updatedashboard read"}
     choices.update(mapping["name"] for mapping in custom_mappings
                    if isinstance(mapping, dict) and isinstance(mapping.get("name"), str)
-                  )
+                   and mapping["name"].casefold() != "updatedashboard read")
     ordered = []
     for builtin in DEFAULT_OPERATIONS:
         # Keep an existing alias's exact spelling so selecting it filters records.
@@ -493,6 +497,7 @@ def latency_health(records, excluded_ids):
 
 def compute_data(operation="all", window=50, ignore_outliers=True, startup="all", persistence="all", configurations=None):
     records, statuses, warnings = get_scan()
+    records = [r for r in records if r["operation"].casefold() != "updatedashboard read"]
     selected_operations = [operation] if isinstance(operation, str) else list(operation)
     selected_operations = list(dict.fromkeys(selected_operations))
     if not selected_operations or "all" in selected_operations:
