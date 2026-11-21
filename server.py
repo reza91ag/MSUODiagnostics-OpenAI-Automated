@@ -550,9 +550,8 @@ def compute_data(operation="all", window=50, ignore_outliers=True, startup="all"
                             "selected_n": before_filter_count, "latest_ms": None, "fastest_ms": None, "mean_ms": None,
                            "median_ms": None, "p95_ms": None, "stddev_ms": None,
                            "divergence_ms": None, "divergence_pct": None, "latest_utc": None})
-    # Detect anomalies against the complete available history of each comparable cohort.
-    # The display window limits shown measurements, never the anomaly baseline.
-    all_excluded_ids = classify_latency_outliers(filtered)
+    # Classify exactly the same selected samples used by statistics and exports.
+    all_excluded_ids = classify_latency_outliers(health_records)
     health_excluded_ids = {r["id"] for r in health_records if r["id"] in all_excluded_ids}
     if ignore_outliers:
         included_records = [r for r in health_records if r["id"] not in health_excluded_ids]
@@ -583,7 +582,7 @@ def compute_data(operation="all", window=50, ignore_outliers=True, startup="all"
         "excluded_count": excluded_count, "selected_count": selected_count,
         "included_count": len(included_records),
         "health": latency_health(health_records, health_excluded_ids),
-        "groups": groups, "recent": sorted(included_records, key=lambda r: r["end_utc"], reverse=True)[:50],
+        "groups": groups, "recent": sorted(included_records, key=lambda r: r["end_utc"], reverse=True),
         "export_records": included_records,
         "sources": statuses, "warnings": warnings,
     }
