@@ -59,7 +59,7 @@ dialog{border:0;border-radius:15px;padding:0;width:min(850px,94vw);box-shadow:0 
   <div id="warnings"></div>
   <section class="controls">
     <div class="control-group">
-      <div class="control"><label for="operationBtn">Operations</label><div class="operation-picker" id="operationPicker"><button class="button" id="operationBtn" type="button" aria-expanded="false" aria-controls="operationOptions">All operations ▾</button><div class="operation-options" id="operationOptions" hidden></div></div></div><div class="control" style="justify-content:end"><button class="button" id="addOperationBtn" type="button">+ Add New Operation</button></div>
+      <div class="control"><label for="operationBtn">Operations</label><div class="operation-picker" id="operationPicker"><button class="button" id="operationBtn" type="button" aria-expanded="false" aria-controls="operationOptions">All operations ▾</button><div class="operation-options" id="operationOptions" hidden></div></div></div><div class="control"><label for="startupFilter">Startup type</label><select id="startupFilter"><option value="all">All startups</option><option value="cold">Cold</option><option value="warm">Warm</option></select></div><div class="control"><label for="persistenceFilter">Cloud access type</label><select id="persistenceFilter"><option value="all">All access types</option><option value="direct">Direct cloud</option><option value="offline">Offline-first</option></select></div><div class="control" style="justify-content:end"><button class="button" id="addOperationBtn" type="button">+ Add New Operation</button></div>
       <div class="control"><label for="window">Average window</label><select id="window"><option value="10">Last 10</option><option value="20">Last 20</option><option value="50" selected>Last 50</option><option value="100">Last 100</option><option value="500">Last 500</option><option value="0">All requests</option></select></div>
       <div class="control" style="justify-content:center"><label for="ignoreOutliers"><input id="ignoreOutliers" type="checkbox" checked> Ignore outliers</label></div>
        <div class="control"><label for="sort">Descending by</label><select id="sort"><option value="latest">Momentary request</option><option value="mean">Average latency</option></select></div>
@@ -113,7 +113,7 @@ let selectedOperations = new Set(["all"]);
 const SETTINGS_KEY='msuo-observatory-view-settings-v1';
 function saveViewSettings(){
  try{localStorage.setItem(SETTINGS_KEY,JSON.stringify({
-  operations:[...selectedOperations],window:$('window').value,
+  operations:[...selectedOperations],startupFilter:$('startupFilter').value,persistenceFilter:$('persistenceFilter').value,window:$('window').value,
   ignoreOutliers:$('ignoreOutliers').checked,sort:$('sort').value,display:$('display').value,
   healthExpanded:!$('healthDetails').hidden
  }));}catch(e){console.warn('Could not persist dashboard settings',e);}
@@ -125,7 +125,7 @@ function restoreViewSettings(){
   if(Array.isArray(saved.operations)&&saved.operations.length&&saved.operations.every(x=>typeof x==='string')){
    selectedOperations=new Set(saved.operations.includes('all')?['all']:saved.operations);
   }
-  for(const id of ['window','sort','display']){
+  for(const id of ['window','sort','display','startupFilter','persistenceFilter']){
    const select=$(id);
    if(typeof saved[id]==='string'&&[...select.options].some(option=>option.value===saved[id]))select.value=saved[id];
   }
@@ -136,7 +136,7 @@ function restoreViewSettings(){
 const NS='http://www.w3.org/2000/svg';
 const num = v => v == null ? '—' : Number(v).toLocaleString('en-US',{maximumFractionDigits:1});
 const ms = v => v == null ? '—' : `${num(v)} ms`;
-function selectionParams(){const qs=new URLSearchParams({window:$('window').value,ignore_outliers:String($('ignoreOutliers').checked)});for(const operation of selectedOperations)qs.append('operation',operation);return qs;}
+function selectionParams(){const qs=new URLSearchParams({window:$('window').value,ignore_outliers:String($('ignoreOutliers').checked),startup:$('startupFilter').value,persistence:$('persistenceFilter').value});for(const operation of selectedOperations)qs.append('operation',operation);return qs;}
 function exportUrl(ext){return '/api/export.'+ext+'?'+selectionParams();}
 function latexUrl(){return exportUrl('tex');}
 function syncExportLinks(){$('latexExport').href=latexUrl();$('pdfExport').href=exportUrl('pdf');$('csvExport').href=exportUrl('csv');}
@@ -305,7 +305,7 @@ function setHealthExpanded(expanded){
  $('healthChevron').textContent=expanded?'▴':'▾';
 }
 $('healthToggle').onclick=()=>{setHealthExpanded($('healthDetails').hidden);saveViewSettings();};
-$('operationBtn').onclick=()=>{const panel=$('operationOptions');panel.hidden=!panel.hidden;$('operationBtn').setAttribute('aria-expanded',String(!panel.hidden));};document.addEventListener('click',e=>{if(!$('operationPicker').contains(e.target)){$('operationOptions').hidden=true;$('operationBtn').setAttribute('aria-expanded','false');}});$('window').onchange=()=>{saveViewSettings();syncExportLinks();refresh();};$('ignoreOutliers').onchange=()=>{saveViewSettings();syncExportLinks();busy=false;refresh();};$('sort').onchange=()=>{saveViewSettings();if(data){renderChart(data.groups);renderSummary(data.groups);}};$('display').onchange=()=>{saveViewSettings();if(data)renderChart(data.groups);};
+$('operationBtn').onclick=()=>{const panel=$('operationOptions');panel.hidden=!panel.hidden;$('operationBtn').setAttribute('aria-expanded',String(!panel.hidden));};document.addEventListener('click',e=>{if(!$('operationPicker').contains(e.target)){$('operationOptions').hidden=true;$('operationBtn').setAttribute('aria-expanded','false');}});for(const id of ['startupFilter','persistenceFilter'])$(id).onchange=()=>{saveViewSettings();syncExportLinks();refresh();};$('window').onchange=()=>{saveViewSettings();syncExportLinks();refresh();};$('ignoreOutliers').onchange=()=>{saveViewSettings();syncExportLinks();busy=false;refresh();};$('sort').onchange=()=>{saveViewSettings();if(data){renderChart(data.groups);renderSummary(data.groups);}};$('display').onchange=()=>{saveViewSettings();if(data)renderChart(data.groups);};
 restoreViewSettings();syncExportLinks();refresh();setInterval(refresh,2000);
 </script>
 </body>
