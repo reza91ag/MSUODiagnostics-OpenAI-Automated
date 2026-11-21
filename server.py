@@ -459,7 +459,7 @@ def classify_latency_outliers(records):
 
 def latency_health(records, excluded_ids):
     """Report anomalies per equivalent cohort; aggregate status without pooling latencies."""
-    recent = sorted(records, key=lambda r: r["end_utc"], reverse=True)[:30]
+    recent = sorted(records, key=lambda r: r["end_utc"], reverse=True)
     flags = [r["id"] in excluded_ids for r in recent]
     affected = {}
     for record in recent:
