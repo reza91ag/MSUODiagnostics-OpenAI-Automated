@@ -110,6 +110,27 @@ dialog{border:0;border-radius:15px;padding:0;width:min(850px,94vw);box-shadow:0 
 const $ = id => document.getElementById(id);
 let data = null, config = {sources:[]}, busy = false, customOperations = [], sourcePassword = null;
 let selectedOperations = new Set(["all"]);
+const SETTINGS_KEY='msuo-observatory-view-settings-v1';
+function saveViewSettings(){
+ try{localStorage.setItem(SETTINGS_KEY,JSON.stringify({
+  operations:[...selectedOperations],window:$('window').value,
+  ignoreOutliers:$('ignoreOutliers').checked,sort:$('sort').value,display:$('display').value
+ }));}catch(e){console.warn('Could not persist dashboard settings',e);}
+}
+function restoreViewSettings(){
+ try{
+  const saved=JSON.parse(localStorage.getItem(SETTINGS_KEY)||'null');
+  if(!saved||typeof saved!=='object')return;
+  if(Array.isArray(saved.operations)&&saved.operations.length&&saved.operations.every(x=>typeof x==='string')){
+   selectedOperations=new Set(saved.operations.includes('all')?['all']:saved.operations);
+  }
+  for(const id of ['window','sort','display']){
+   const select=$(id);
+   if(typeof saved[id]==='string'&&[...select.options].some(option=>option.value===saved[id]))select.value=saved[id];
+  }
+  if(typeof saved.ignoreOutliers==='boolean')$('ignoreOutliers').checked=saved.ignoreOutliers;
+ }catch(e){console.warn('Could not restore dashboard settings',e);}
+}
 const NS='http://www.w3.org/2000/svg';
 const num = v => v == null ? '—' : Number(v).toLocaleString('en-US',{maximumFractionDigits:1});
 const ms = v => v == null ? '—' : `${num(v)} ms`;
@@ -277,8 +298,8 @@ document.addEventListener('click',e=>{if(!exportMenu.contains(e.target))closeExp
 exportMenu.addEventListener('keydown',e=>{if(e.key==='Escape'){closeExportMenu();$('exportBtn').blur();}});
 $('exportOptions').addEventListener('click',e=>{if(e.target.closest('a,button'))closeExportMenu();});
 $('healthToggle').onclick=()=>{const details=$('healthDetails');details.hidden=!details.hidden;$('healthToggle').setAttribute('aria-expanded',String(!details.hidden));};
-$('operationBtn').onclick=()=>{const panel=$('operationOptions');panel.hidden=!panel.hidden;$('operationBtn').setAttribute('aria-expanded',String(!panel.hidden));};document.addEventListener('click',e=>{if(!$('operationPicker').contains(e.target)){$('operationOptions').hidden=true;$('operationBtn').setAttribute('aria-expanded','false');}});$('window').onchange=()=>{syncExportLinks();refresh();};$('ignoreOutliers').onchange=()=>{syncExportLinks();busy=false;refresh();};$('sort').onchange=()=>{if(data){renderChart(data.groups);renderSummary(data.groups);}};$('display').onchange=()=>{if(data)renderChart(data.groups);};
-syncExportLinks();refresh();setInterval(refresh,2000);
+$('operationBtn').onclick=()=>{const panel=$('operationOptions');panel.hidden=!panel.hidden;$('operationBtn').setAttribute('aria-expanded',String(!panel.hidden));};document.addEventListener('click',e=>{if(!$('operationPicker').contains(e.target)){$('operationOptions').hidden=true;$('operationBtn').setAttribute('aria-expanded','false');}});$('window').onchange=()=>{saveViewSettings();syncExportLinks();refresh();};$('ignoreOutliers').onchange=()=>{saveViewSettings();syncExportLinks();busy=false;refresh();};$('sort').onchange=()=>{saveViewSettings();if(data){renderChart(data.groups);renderSummary(data.groups);}};$('display').onchange=()=>{saveViewSettings();if(data)renderChart(data.groups);};
+restoreViewSettings();syncExportLinks();refresh();setInterval(refresh,2000);
 </script>
 </body>
 </html>
