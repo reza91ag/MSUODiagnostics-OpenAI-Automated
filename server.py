@@ -540,8 +540,10 @@ def compute_data(operation="all", window=50, ignore_outliers=True):
                             "selected_n": before_filter_count, "latest_ms": None, "fastest_ms": None, "mean_ms": None,
                            "median_ms": None, "p95_ms": None, "stddev_ms": None,
                            "divergence_ms": None, "divergence_pct": None, "latest_utc": None})
-    # Rebuild configuration summaries from comparable-cohort filtered samples.
-    health_excluded_ids = classify_latency_outliers(health_records)
+    # Detect anomalies against the complete available history of each comparable cohort.
+    # The display window limits shown measurements, never the anomaly baseline.
+    all_excluded_ids = classify_latency_outliers(filtered)
+    health_excluded_ids = {r["id"] for r in health_records if r["id"] in all_excluded_ids}
     if ignore_outliers:
         included_records = [r for r in health_records if r["id"] not in health_excluded_ids]
         excluded_count = len(health_excluded_ids)
