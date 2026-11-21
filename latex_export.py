@@ -53,7 +53,7 @@ def render_latex(data):
         "Operation & " + escape_latex("All operations" if operation == "all" else operation),
         "Window & " + ("All requests" if window == 0 else f"Last {window} per configuration"),
         "Total raw lifecycles & " + str(data["total_requests"]),
-        "Outlier filtering & " + ("Enabled (Tukey 1.5 IQR)" if data.get("ignore_outliers") else "Disabled"),
+        "Outlier filtering & " + ("Enabled (MAD modified Z-score 3.5; IQR fallback)" if data.get("ignore_outliers") else "Disabled"),
         "Excluded outliers & " + str(data.get("excluded_count", 0)),
         "Included lifecycles & " + str(data.get("included_count", 0)),
         "Generated (UTC) & " + escape_latex(data["generated_utc"]),
