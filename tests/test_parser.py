@@ -56,6 +56,26 @@ class WatchDogParserTests(unittest.TestCase):
             server.invalidate_cache()
 
 
+    def test_multiple_operation_selection_filters_all_statistics(self):
+        original = server.CONFIG
+        try:
+            server.CONFIG = {"sources": [
+                {"name": "EntryFlow", "path": str(ROOT / "sample_logs" / "EntryFlow"), "persistence": "offline", "startup": "auto"},
+                {"name": "OptiSpec", "path": str(ROOT / "sample_logs" / "OptiSpec"), "persistence": "direct", "startup": "auto"},
+            ], "overrides": {}}
+            server.invalidate_cache()
+            one = server.compute_data(["UpdateDashboard CRUD"], 50, ignore_outliers=False)
+            both = server.compute_data(["UpdateDashboard CRUD", "UpdateDashboard Read"], 50, ignore_outliers=False)
+            self.assertLess(one["operation_requests"], both["operation_requests"])
+            self.assertEqual(one["included_count"], one["operation_requests"])
+            self.assertEqual(both["included_count"], both["operation_requests"])
+            self.assertEqual({r["operation"] for r in both["export_records"]}, {"UpdateDashboard CRUD", "UpdateDashboard Read"})
+            self.assertEqual(sum(g["n"] for g in both["groups"]), both["included_count"])
+            self.assertEqual(both["selected_operations"], ["UpdateDashboard CRUD", "UpdateDashboard Read"])
+        finally:
+            server.CONFIG = original
+            server.invalidate_cache()
+
     def test_outlier_toggle_changes_statistics(self):
         samples = [{"duration_ms": v} for v in (50, 55, 60, 65, 70, 75, 80, 90, 1000)]
         included, excluded = server.remove_latency_outliers(samples)
