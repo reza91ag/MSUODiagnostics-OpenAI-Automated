@@ -157,7 +157,7 @@ class WatchDogParserTests(unittest.TestCase):
         self.assertEqual(server.remove_latency_outliers(
             [{"duration_ms": v} for v in [35, 100, 101, 102, 103, 104, 105, 106]])[1], 0)
 
-    def test_health_uses_configuration_baselines_without_changing_statistics(self):
+    def test_ignore_outliers_excludes_health_detected_anomalies(self):
         from unittest.mock import patch
         from datetime import datetime, timedelta, timezone
         start = datetime(2026, 1, 1, tzinfo=timezone.utc)
@@ -181,12 +181,14 @@ class WatchDogParserTests(unittest.TestCase):
         self.assertEqual(unfiltered["health"]["recent_excluded"], 1)
         self.assertEqual(actual["health"]["affected_operations"][0]["startup"], "warm")
         self.assertEqual(actual["health"]["affected_operations"][0]["persistence"], "direct")
-        # The main statistics and export exclusions still use the pooled baseline.
-        self.assertEqual(actual["excluded_count"], len(server.classify_latency_outliers(records)))
+        # Ignore outliers must exclude exactly the anomalies reported by Health.
+        self.assertEqual(actual["excluded_count"], actual["health"]["recent_excluded"])
+        self.assertEqual(actual["excluded_count"], 1)
         self.assertEqual(actual["included_count"], 16 - actual["excluded_count"])
         self.assertEqual(unfiltered["included_count"], 16)
+        self.assertEqual(unfiltered["excluded_count"], 0)
         self.assertEqual({r["id"] for r in actual["export_records"]},
-                         {r["id"] for r in records} - server.classify_latency_outliers(records))
+                         {r["id"] for r in records} - {"7"})
 
     def test_outlier_detection_uses_full_history_not_display_window(self):
         from datetime import datetime, timedelta, timezone
