@@ -494,13 +494,19 @@ def latency_health(records, excluded_ids):
             "sequence": [int(x) for x in reversed(flags)]}
 
 
-def compute_data(operation="all", window=50, ignore_outliers=True):
+def compute_data(operation="all", window=50, ignore_outliers=True, startup="all", persistence="all"):
     records, statuses, warnings = get_scan()
     selected_operations = [operation] if isinstance(operation, str) else list(operation)
     selected_operations = list(dict.fromkeys(selected_operations))
     if not selected_operations or "all" in selected_operations:
         selected_operations = ["all"]
     filtered = records if selected_operations == ["all"] else [r for r in records if r["operation"] in selected_operations]
+    if startup not in ("all", "cold", "warm"):
+        startup = "all"
+    if persistence not in ("all", "direct", "offline"):
+        persistence = "all"
+    filtered = [r for r in filtered if (startup == "all" or r["startup"] == startup)
+                and (persistence == "all" or r["persistence"] == persistence)]
     groups = []
     included_records = []
     health_records = []
@@ -568,7 +574,7 @@ def compute_data(operation="all", window=50, ignore_outliers=True):
         "operation_requests": len(filtered),
         "operations": available_operations(records, CONFIG.get("operations", [])),
         "selected_operation": selected_operations[0] if len(selected_operations) == 1 else "multiple",
-        "selected_operations": selected_operations, "window": window,
+        "selected_operations": selected_operations, "selected_startup": startup, "selected_persistence": persistence, "window": window,
         "ignore_outliers": ignore_outliers, "outlier_method": "Modified Z-score (MAD, 3.5); IQR fallback",
         "excluded_count": excluded_count, "selected_count": selected_count,
         "included_count": len(included_records),
@@ -625,7 +631,9 @@ class Handler(BaseHTTPRequestHandler):
             window = 50
         window = window if window in (0, 10, 20, 50, 100, 500) else 50
         ignore_outliers = args.get("ignore_outliers", ["true"])[0].lower() not in ("false", "0", "off")
-        return compute_data(operations, window, ignore_outliers)
+        startup = args.get("startup", ["all"])[0]
+        persistence = args.get("persistence", ["all"])[0]
+        return compute_data(operations, window, ignore_outliers, startup, persistence)
 
     def do_GET(self):
         url = urlsplit(self.path)
