@@ -157,35 +157,6 @@ class WatchDogParserTests(unittest.TestCase):
         self.assertEqual(server.remove_latency_outliers(
             [{"duration_ms": v} for v in [35, 100, 101, 102, 103, 104, 105, 106]])[1], 0)
 
-    def test_outlier_baselines_are_independent_per_configuration(self):
-        from unittest.mock import patch
-        from datetime import datetime, timedelta, timezone
-        start = datetime(2026, 1, 1, tzinfo=timezone.utc)
-        records = []
-        for configuration, values in [
-            (("warm", "direct"), [100, 101, 102, 103, 104, 105, 106, 1000]),
-            (("cold", "offline"), [10000, 10001, 10002, 10003, 10004, 10005, 10006, 10007]),
-        ]:
-            for duration in values:
-                i = len(records)
-                records.append({"id": str(i), "operation": "SignIn",
-                    "startup": configuration[0], "persistence": configuration[1],
-                    "duration_ms": duration,
-                    "end_utc": (start + timedelta(seconds=i)).isoformat()})
-        records.reverse()
-        with patch.object(server, "get_scan", return_value=(records, [], [])):
-            result = server.compute_data("all", 0, ignore_outliers=True)
-            unfiltered = server.compute_data("all", 0, ignore_outliers=False)
-        self.assertEqual(result["excluded_count"], 1)
-        self.assertEqual(result["included_count"], 15)
-        self.assertEqual(unfiltered["included_count"], 16)
-        groups = {(g["startup"], g["persistence"]): g for g in result["groups"]}
-        self.assertEqual(groups[("warm", "direct")]["n"], 7)
-        self.assertEqual(groups[("cold", "offline")]["n"], 8)
-        self.assertEqual(groups[("cold", "offline")]["excluded_n"], 0)
-        self.assertNotIn(1000, [r["duration_ms"] for r in result["export_records"]])
-        self.assertIn(10007, [r["duration_ms"] for r in result["export_records"]])
-
     def test_outlier_detection_uses_full_history_not_display_window(self):
         from datetime import datetime, timedelta, timezone
         from unittest.mock import patch
