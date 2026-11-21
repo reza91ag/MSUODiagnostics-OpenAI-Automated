@@ -447,6 +447,7 @@ def compute_data(operation="all", window=50):
     return {
         "generated_utc": datetime.now(timezone.utc).isoformat(),
         "total_requests": len(records),
+        "operation_requests": len(filtered),
         "operations": available_operations(records, CONFIG.get("operations", [])),
         "selected_operation": operation, "window": window,
         "groups": groups, "recent": filtered[:50],
