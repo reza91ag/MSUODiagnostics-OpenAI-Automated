@@ -413,14 +413,34 @@ def available_operations(records, custom_mappings=()):
     return ordered + sorted(choices, key=str.casefold)
 
 
-def compute_data(operation="all", window=50):
+def remove_iqr_outliers(selected):
+    """Tukey 1.5*IQR fences, computed independently per selected configuration."""
+    if len(selected) < 4:
+        return selected, 0
+    values = [r["duration_ms"] for r in selected]
+    q1, q3 = percentile(values, .25), percentile(values, .75)
+    iqr = q3 - q1
+    low, high = q1 - 1.5 * iqr, q3 + 1.5 * iqr
+    included = [r for r in selected if low <= r["duration_ms"] <= high]
+    return included, len(selected) - len(included)
+
+
+def compute_data(operation="all", window=50, ignore_outliers=True):
     records, statuses, warnings = get_scan()
     filtered = records if operation == "all" else [r for r in records if r["operation"] == operation]
     groups = []
+    included_records = []
+    excluded_count = 0
+    selected_count = 0
     for startup, persistence in (("cold", "offline"), ("cold", "direct"),
                                  ("warm", "direct"), ("warm", "offline")):
         matching = [r for r in filtered if r["startup"] == startup and r["persistence"] == persistence]
         selected = matching if window == 0 else matching[:window]
+        selected_count += len(selected)
+        if ignore_outliers:
+            selected, excluded = remove_iqr_outliers(selected)
+            excluded_count += excluded
+        included_records.extend(selected)
         values = [r["duration_ms"] for r in selected]
         if values:
             mean = statistics.mean(values)
@@ -450,7 +470,11 @@ def compute_data(operation="all", window=50):
         "operation_requests": len(filtered),
         "operations": available_operations(records, CONFIG.get("operations", [])),
         "selected_operation": operation, "window": window,
-        "groups": groups, "recent": filtered[:50],
+        "ignore_outliers": ignore_outliers, "outlier_method": "Tukey 1.5 x IQR per configuration",
+        "excluded_count": excluded_count, "selected_count": selected_count,
+        "included_count": len(included_records),
+        "groups": groups, "recent": sorted(included_records, key=lambda r: r["end_utc"], reverse=True)[:50],
+        "export_records": included_records,
         "sources": statuses, "warnings": warnings,
     }
 
@@ -492,6 +516,17 @@ class Handler(BaseHTTPRequestHandler):
             raise ValueError("Invalid request body length")
         return json.loads(self.rfile.read(length).decode("utf-8"))
 
+    @staticmethod
+    def selection(args):
+        operation = args.get("operation", ["all"])[0]
+        try:
+            window = int(args.get("window", ["50"])[0])
+        except ValueError:
+            window = 50
+        window = window if window in (0, 10, 20, 50, 100, 500) else 50
+        ignore_outliers = args.get("ignore_outliers", ["true"])[0].lower() not in ("false", "0", "off")
+        return compute_data(operation, window, ignore_outliers)
+
     def do_GET(self):
         url = urlsplit(self.path)
         if url.path in ("/", "/index.html"):
@@ -508,15 +543,11 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_json({"operations": CONFIG.get("operations", [])})
         elif url.path == "/api/data":
             args = parse_qs(url.query)
-            operation = args.get("operation", ["all"])[0]
-            try:
-                window = int(args.get("window", ["50"])[0])
-            except ValueError:
-                window = 50
-            window = window if window in (0, 10, 20, 50, 100, 500) else 50
-            self.send_json(compute_data(operation, window))
+            self.send_json(self.selection(args))
         elif url.path == "/api/export.csv":
-            records, _, _ = get_scan()
+            args = parse_qs(url.query)
+            data_selection = self.selection(args)
+            records = data_selection["export_records"]
             output = io.StringIO()
             cols = ("id", "source", "operation", "startup", "startup_evidence", "persistence",
                     "duration_ms", "start_utc", "end_utc", "constructor_to_ingress_ms")
@@ -532,13 +563,8 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(data)
         elif url.path == "/api/export.tex":
             args = parse_qs(url.query)
-            operation = args.get("operation", ["all"])[0]
-            try:
-                window = int(args.get("window", ["50"])[0])
-            except ValueError:
-                window = 50
-            window = window if window in (0, 10, 20, 50, 100, 500) else 50
-            payload = render_latex(compute_data(operation, window)).encode("utf-8")
+
+            payload = render_latex(self.selection(args)).encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "application/x-tex; charset=utf-8")
             self.send_header("Content-Disposition", 'attachment; filename="msuo_diagnostics_tables.tex"')
@@ -555,7 +581,7 @@ class Handler(BaseHTTPRequestHandler):
             except ValueError:
                 window = 50
             window = window if window in (0, 10, 20, 50, 100, 500) else 50
-            payload = render_pdf(compute_data(operation, window))
+            payload = render_pdf(self.selection(args))
             self.send_response(200)
             self.send_header("Content-Type", "application/pdf")
             self.send_header("Content-Disposition", 'attachment; filename="msuo_diagnostics_report.pdf"')
