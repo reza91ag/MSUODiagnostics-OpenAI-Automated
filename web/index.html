@@ -74,7 +74,7 @@ dialog{border:0;border-radius:15px;padding:0;width:min(850px,94vw);box-shadow:0 
     <div class="metric"><small>Last scan</small><strong id="lastScan" style="font-size:22px">—</strong><span class="hint">Times shown in local browser time</span></div>
   </section>
   <section class="panel" id="healthPanel">
-    <div class="panel-head"><div><h2>Latency Health</h2><p>Request-distance and anomaly clustering · diagnostic signal, not root-cause attribution</p></div><button class="button" id="healthToggle" type="button" aria-expanded="false" aria-controls="healthDetails"><span id="healthBadge">Awaiting samples</span> ▾</button></div>
+    <div class="panel-head"><div><h2>Latency Health</h2><p>Request-distance and anomaly clustering · diagnostic signal, not root-cause attribution</p></div><button class="button" id="healthToggle" type="button" aria-expanded="false" aria-controls="healthDetails"><span id="healthBadge">Awaiting samples</span> <span id="healthChevron" aria-hidden="true">▾</span></button></div>
     <div class="health-overview"><div><small>Requests since last anomaly</small><strong id="healthDistance">—</strong></div><div><small>Excluded / recent requests</small><strong id="healthCount">—</strong></div><div><small>Localization</small><strong id="healthLocalization">—</strong></div></div>
     <div id="healthDetails" hidden><div class="health-detail-inner"><p class="muted">Recent requests, oldest to newest. Red indicates an excluded latency anomaly.</p><div id="healthSequence" class="health-sequence"></div><h3>Affected operations</h3><div class="table-wrap"><table><thead><tr><th>Source</th><th>Operation</th><th>Configuration</th><th>Excluded</th><th>Requests</th><th>Rate</th><th>Concentration</th></tr></thead><tbody id="healthOperations"></tbody></table></div><p class="muted">Temporal cluster: at least 3 exclusions within 5 comparable requests (same source, operation, startup and persistence). Operational concentration: at least 3 exclusions among 5+ requests, at least half of anomalies, and an exclusion rate of at least 20% and twice that of other operations. Each anomaly is detected only against its own source, operation, startup and persistence cohort. Based on the last 30 selected requests; independent of the Ignore outliers display toggle.</p></div></div>
   </section>
@@ -114,7 +114,8 @@ const SETTINGS_KEY='msuo-observatory-view-settings-v1';
 function saveViewSettings(){
  try{localStorage.setItem(SETTINGS_KEY,JSON.stringify({
   operations:[...selectedOperations],window:$('window').value,
-  ignoreOutliers:$('ignoreOutliers').checked,sort:$('sort').value,display:$('display').value
+  ignoreOutliers:$('ignoreOutliers').checked,sort:$('sort').value,display:$('display').value,
+  healthExpanded:!$('healthDetails').hidden
  }));}catch(e){console.warn('Could not persist dashboard settings',e);}
 }
 function restoreViewSettings(){
@@ -129,6 +130,7 @@ function restoreViewSettings(){
    if(typeof saved[id]==='string'&&[...select.options].some(option=>option.value===saved[id]))select.value=saved[id];
   }
   if(typeof saved.ignoreOutliers==='boolean')$('ignoreOutliers').checked=saved.ignoreOutliers;
+  if(typeof saved.healthExpanded==='boolean')setHealthExpanded(saved.healthExpanded);
  }catch(e){console.warn('Could not restore dashboard settings',e);}
 }
 const NS='http://www.w3.org/2000/svg';
@@ -297,7 +299,12 @@ $('exportBtn').onclick=()=>{const open=exportMenu.classList.toggle('open');$('ex
 document.addEventListener('click',e=>{if(!exportMenu.contains(e.target))closeExportMenu();});
 exportMenu.addEventListener('keydown',e=>{if(e.key==='Escape'){closeExportMenu();$('exportBtn').blur();}});
 $('exportOptions').addEventListener('click',e=>{if(e.target.closest('a,button'))closeExportMenu();});
-$('healthToggle').onclick=()=>{const details=$('healthDetails');details.hidden=!details.hidden;$('healthToggle').setAttribute('aria-expanded',String(!details.hidden));};
+function setHealthExpanded(expanded){
+ $('healthDetails').hidden=!expanded;
+ $('healthToggle').setAttribute('aria-expanded',String(expanded));
+ $('healthChevron').textContent=expanded?'▴':'▾';
+}
+$('healthToggle').onclick=()=>{setHealthExpanded($('healthDetails').hidden);saveViewSettings();};
 $('operationBtn').onclick=()=>{const panel=$('operationOptions');panel.hidden=!panel.hidden;$('operationBtn').setAttribute('aria-expanded',String(!panel.hidden));};document.addEventListener('click',e=>{if(!$('operationPicker').contains(e.target)){$('operationOptions').hidden=true;$('operationBtn').setAttribute('aria-expanded','false');}});$('window').onchange=()=>{saveViewSettings();syncExportLinks();refresh();};$('ignoreOutliers').onchange=()=>{saveViewSettings();syncExportLinks();busy=false;refresh();};$('sort').onchange=()=>{saveViewSettings();if(data){renderChart(data.groups);renderSummary(data.groups);}};$('display').onchange=()=>{saveViewSettings();if(data)renderChart(data.groups);};
 restoreViewSettings();syncExportLinks();refresh();setInterval(refresh,2000);
 </script>
