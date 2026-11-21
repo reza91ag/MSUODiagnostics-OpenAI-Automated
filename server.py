@@ -367,6 +367,9 @@ def scan_all():
                         if override in {"cold", "warm"}:
                             event["startup"] = override
                             event["startup_evidence"] = "Per-request reviewer override"
+                        # Startup-internal dashboard read is not a standalone benchmark lifecycle.
+                        if event["operation"].casefold() == "updatedashboard read":
+                            continue
                         records.append(event)
                         status["requests"] += 1
                 except (OSError, UnicodeError) as exc:
@@ -402,7 +405,8 @@ def available_operations(records, custom_mappings=()):
     """Built-in SignUp and SignIn first; then observed/custom actions alphabetically."""
     choices = {record["operation"] for record in records}
     choices.update(mapping["name"] for mapping in custom_mappings
-                   if isinstance(mapping, dict) and isinstance(mapping.get("name"), str))
+                   if isinstance(mapping, dict) and isinstance(mapping.get("name"), str)
+                   and mapping["name"].casefold() != "updatedashboard read")
     ordered = []
     for builtin in DEFAULT_OPERATIONS:
         # Keep an existing alias's exact spelling so selecting it filters records.
