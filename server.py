@@ -441,7 +441,11 @@ def remove_latency_outliers(selected):
 
 def compute_data(operation="all", window=50, ignore_outliers=True):
     records, statuses, warnings = get_scan()
-    filtered = records if operation == "all" else [r for r in records if r["operation"] == operation]
+    selected_operations = [operation] if isinstance(operation, str) else list(operation)
+    selected_operations = list(dict.fromkeys(selected_operations))
+    if not selected_operations or "all" in selected_operations:
+        selected_operations = ["all"]
+    filtered = records if selected_operations == ["all"] else [r for r in records if r["operation"] in selected_operations]
     groups = []
     included_records = []
     excluded_count = 0
@@ -486,7 +490,8 @@ def compute_data(operation="all", window=50, ignore_outliers=True):
         "total_requests": len(records),
         "operation_requests": len(filtered),
         "operations": available_operations(records, CONFIG.get("operations", [])),
-        "selected_operation": operation, "window": window,
+        "selected_operation": selected_operations[0] if len(selected_operations) == 1 else "multiple",
+        "selected_operations": selected_operations, "window": window,
         "ignore_outliers": ignore_outliers, "outlier_method": "Modified Z-score (MAD, 3.5); IQR fallback",
         "excluded_count": excluded_count, "selected_count": selected_count,
         "included_count": len(included_records),
@@ -535,14 +540,14 @@ class Handler(BaseHTTPRequestHandler):
 
     @staticmethod
     def selection(args):
-        operation = args.get("operation", ["all"])[0]
+        operations = args.get("operation", ["all"])
         try:
             window = int(args.get("window", ["50"])[0])
         except ValueError:
             window = 50
         window = window if window in (0, 10, 20, 50, 100, 500) else 50
         ignore_outliers = args.get("ignore_outliers", ["true"])[0].lower() not in ("false", "0", "off")
-        return compute_data(operation, window, ignore_outliers)
+        return compute_data(operations, window, ignore_outliers)
 
     def do_GET(self):
         url = urlsplit(self.path)
@@ -592,12 +597,6 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(payload)
         elif url.path == "/api/export.pdf":
             args = parse_qs(url.query)
-            operation = args.get("operation", ["all"])[0]
-            try:
-                window = int(args.get("window", ["50"])[0])
-            except ValueError:
-                window = 50
-            window = window if window in (0, 10, 20, 50, 100, 500) else 50
             payload = render_pdf(self.selection(args))
             self.send_response(200)
             self.send_header("Content-Type", "application/pdf")
