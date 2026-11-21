@@ -439,17 +439,42 @@ def remove_latency_outliers(selected):
     return included, len(selected) - len(included)
 
 
+def comparison_key(record):
+    """Only equivalent requests may define one another's latency baseline."""
+    return (record["source"], record["operation"], record["startup"], record["persistence"])
+
+
+def classify_latency_outliers(records):
+    """Apply MAD/IQR independently to source/operation/startup/persistence cohorts."""
+    cohorts = {}
+    for record in records:
+        cohorts.setdefault(comparison_key(record), []).append(record)
+    excluded_ids = set()
+    for cohort in cohorts.values():
+        included, _ = remove_latency_outliers(cohort)
+        included_ids = {record["id"] for record in included}
+        excluded_ids.update(record["id"] for record in cohort if record["id"] not in included_ids)
+    return excluded_ids
+
+
 def latency_health(records, excluded_ids):
-    """Classify request-sequence latency anomalies, not infrastructure root causes."""
+    """Report anomalies per equivalent cohort; aggregate status without pooling latencies."""
     recent = sorted(records, key=lambda r: r["end_utc"], reverse=True)[:30]
     flags = [r["id"] in excluded_ids for r in recent]
     affected = {}
-    for r in recent:
-        item = affected.setdefault(r["operation"], {"operation": r["operation"], "requests": 0, "excluded": 0})
+    for record in recent:
+        key = comparison_key(record)
+        item = affected.setdefault(key, {"source": key[0], "operation": key[1],
+            "startup": key[2], "persistence": key[3], "requests": 0, "excluded": 0})
         item["requests"] += 1
-        item["excluded"] += int(r["id"] in excluded_ids)
+        item["excluded"] += int(record["id"] in excluded_ids)
     count = sum(flags)
-    temporal = any(sum(flags[i:i + 5]) >= 3 for i in range(max(0, len(flags) - 4)))
+    # Temporal clustering must also occur within one comparable cohort.
+    temporal = False
+    for key in affected:
+        cohort_flags = [r["id"] in excluded_ids for r in recent if comparison_key(r) == key]
+        if any(sum(cohort_flags[i:i + 5]) >= 3 for i in range(max(0, len(cohort_flags) - 4))):
+            temporal = True
     for item in affected.values():
         item["rate_pct"] = round(100 * item["excluded"] / item["requests"], 1)
         other_n = len(recent) - item["requests"]
@@ -489,12 +514,6 @@ def compute_data(operation="all", window=50, ignore_outliers=True):
         selected_count += len(selected)
         before_filter_count = len(selected)
         health_records.extend(selected)
-        clean, _ = remove_latency_outliers(selected)
-        clean_ids = {r["id"] for r in clean}
-        health_excluded_ids.update(r["id"] for r in selected if r["id"] not in clean_ids)
-        if ignore_outliers:
-            selected = clean
-            excluded_count += before_filter_count - len(selected)
         included_records.extend(selected)
         values = [r["duration_ms"] for r in selected]
         if values:
@@ -521,6 +540,26 @@ def compute_data(operation="all", window=50, ignore_outliers=True):
                             "selected_n": before_filter_count, "latest_ms": None, "fastest_ms": None, "mean_ms": None,
                            "median_ms": None, "p95_ms": None, "stddev_ms": None,
                            "divergence_ms": None, "divergence_pct": None, "latest_utc": None})
+    # Rebuild configuration summaries from comparable-cohort filtered samples.
+    health_excluded_ids = classify_latency_outliers(health_records)
+    if ignore_outliers:
+        included_records = [r for r in health_records if r["id"] not in health_excluded_ids]
+        excluded_count = len(health_excluded_ids)
+        for group in groups:
+            selected = [r for r in included_records if r["startup"] == group["startup"] and r["persistence"] == group["persistence"]]
+            values = [r["duration_ms"] for r in selected]
+            group["n"] = len(values)
+            group["excluded_n"] = group["selected_n"] - len(values)
+            group["latest_ms"] = values[0] if values else None
+            group["fastest_ms"] = min(values) if values else None
+            group["mean_ms"] = round(statistics.mean(values), 2) if values else None
+            group["median_ms"] = round(statistics.median(values), 2) if values else None
+            group["p95_ms"] = round(percentile(values, .95), 2) if values else None
+            group["stddev_ms"] = round(statistics.pstdev(values), 2) if values else None
+            delta = values[0] - statistics.mean(values) if values else None
+            group["divergence_ms"] = round(delta, 2) if values else None
+            group["divergence_pct"] = round(delta / statistics.mean(values) * 100, 2) if values and statistics.mean(values) else None
+            group["latest_utc"] = selected[0]["end_utc"] if selected else None
     return {
         "generated_utc": datetime.now(timezone.utc).isoformat(),
         "total_requests": len(records),
