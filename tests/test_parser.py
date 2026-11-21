@@ -42,7 +42,7 @@ class WatchDogParserTests(unittest.TestCase):
                  "persistence": "direct", "startup": "auto"},
             ], "overrides": {}}
             server.invalidate_cache()
-            d = server.compute_data("all", 50)
+            d = server.compute_data("all", 50, ignore_outliers=False)
             self.assertEqual(d["total_requests"], 8)
             cold_offline = next(g for g in d["groups"] if g["startup"] == "cold" and g["persistence"] == "offline")
             self.assertEqual(cold_offline["n"], 5)
@@ -55,6 +55,13 @@ class WatchDogParserTests(unittest.TestCase):
             server.CONFIG = original
             server.invalidate_cache()
 
+
+    def test_outlier_toggle_changes_statistics(self):
+        samples = [{"duration_ms": v} for v in (50, 55, 60, 65, 70, 75, 80, 90, 1000)]
+        included, excluded = server.remove_latency_outliers(samples)
+        self.assertEqual(excluded, 1)
+        self.assertEqual([r["duration_ms"] for r in included], [50, 55, 60, 65, 70, 75, 80, 90])
+        self.assertEqual(server.remove_latency_outliers(samples[:3])[1], 0)
 
     def test_cache_reloads_after_file_append(self):
         import tempfile
