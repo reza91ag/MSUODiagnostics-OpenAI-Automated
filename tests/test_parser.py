@@ -157,6 +157,37 @@ class WatchDogParserTests(unittest.TestCase):
         self.assertEqual(server.remove_latency_outliers(
             [{"duration_ms": v} for v in [35, 100, 101, 102, 103, 104, 105, 106]])[1], 0)
 
+    def test_health_uses_configuration_baselines_without_changing_statistics(self):
+        from unittest.mock import patch
+        from datetime import datetime, timedelta, timezone
+        start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        records = []
+        for startup, persistence, values in [
+            ("warm", "direct", [100, 101, 102, 103, 104, 105, 106, 1000]),
+            ("cold", "offline", [10000, 10001, 10002, 10003, 10004, 10005, 10006, 10007]),
+        ]:
+            for value in values:
+                i = len(records)
+                records.append({"id": str(i), "operation": "SignIn",
+                    "startup": startup, "persistence": persistence,
+                    "duration_ms": value,
+                    "end_utc": (start + timedelta(seconds=i)).isoformat()})
+        records.reverse()
+        with patch.object(server, "get_scan", return_value=(records, [], [])):
+            actual = server.compute_data("all", 0, ignore_outliers=True)
+            unfiltered = server.compute_data("all", 0, ignore_outliers=False)
+        # Health flags the warm/direct anomaly against its own baseline.
+        self.assertEqual(actual["health"]["recent_excluded"], 1)
+        self.assertEqual(unfiltered["health"]["recent_excluded"], 1)
+        self.assertEqual(actual["health"]["affected_operations"][0]["startup"], "warm")
+        self.assertEqual(actual["health"]["affected_operations"][0]["persistence"], "direct")
+        # The main statistics and export exclusions still use the pooled baseline.
+        self.assertEqual(actual["excluded_count"], len(server.classify_latency_outliers(records)))
+        self.assertEqual(actual["included_count"], 16 - actual["excluded_count"])
+        self.assertEqual(unfiltered["included_count"], 16)
+        self.assertEqual({r["id"] for r in actual["export_records"]},
+                         {r["id"] for r in records} - server.classify_latency_outliers(records))
+
     def test_outlier_detection_uses_full_history_not_display_window(self):
         from datetime import datetime, timedelta, timezone
         from unittest.mock import patch
