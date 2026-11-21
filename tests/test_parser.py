@@ -97,35 +97,41 @@ class WatchDogParserTests(unittest.TestCase):
         self.assertFalse(operational["temporal_cluster"])
         self.assertEqual(operational["affected_operations"][0]["operation"], "A")
 
-    def test_outliers_group_by_operation_and_configuration_across_sources(self):
+    def test_outliers_use_one_baseline_across_selected_records(self):
         from datetime import datetime, timedelta, timezone
+        from unittest.mock import patch
         start = datetime(2026, 1, 1, tzinfo=timezone.utc)
         records = []
-        # The same operation/configuration shares a baseline across sources.
-        # Different operations and configurations must not share it.
-        for source, operation, startup, persistence, base in [
-            ("AppA", "SignIn", "warm", "direct", 100),
-            ("AppB", "SignIn", "warm", "direct", 100),
-            ("AppA", "Dashboard", "warm", "direct", 10000),
-            ("AppA", "SignIn", "cold", "direct", 90000),
-            ("AppA", "SignIn", "warm", "offline", 120000),
-        ]:
-            for i in range(8):
-                records.append({"id": f"{source}-{operation}-{startup}-{persistence}-{i}",
-                    "source": source, "operation": operation, "startup": startup,
-                    "persistence": persistence, "duration_ms": base + i,
-                    "end_utc": (start + timedelta(seconds=len(records))).isoformat()})
-        self.assertEqual(server.classify_latency_outliers(records), set())
-        slow = records[0]
-        slow["duration_ms"] = 5000
-        self.assertEqual(server.classify_latency_outliers(records), {slow["id"]})
-        slow["end_utc"] = (start + timedelta(seconds=100)).isoformat()
-        health = server.latency_health(records, {slow["id"]})
-        self.assertEqual(health["affected_operations"][0]["source"], "All selected sources")
-        self.assertEqual(health["affected_operations"][0]["operation"], "SignIn")
-        self.assertEqual(health["affected_operations"][0]["startup"], "warm")
-        self.assertEqual(health["affected_operations"][0]["persistence"], "direct")
-        # Unusually fast samples are not slow-latency outliers.
+        for i, (duration, operation, startup, persistence) in enumerate([
+            (35, "SignIn", "warm", "offline"),
+            (51, "Dashboard", "warm", "offline"),
+            (67, "SignIn", "warm", "offline"),
+            (100, "Dashboard", "warm", "offline"),
+            (110, "SignIn", "warm", "offline"),
+            (120, "Dashboard", "warm", "offline"),
+            (153, "SignIn", "warm", "offline"),
+            (2043, "Dashboard", "warm", "offline"),
+            (2049, "SignIn", "warm", "offline"),
+            (2208, "Dashboard", "warm", "offline"),
+            (50000, "Other", "cold", "direct"),
+        ]):
+            records.append({"id": str(i), "source": "AppA" if i % 2 else "AppB",
+                "operation": operation, "startup": startup, "persistence": persistence,
+                "duration_ms": duration,
+                "end_utc": (start + timedelta(seconds=i)).isoformat()})
+        records.reverse()
+        with patch.object(server, "get_scan", return_value=(records, [], [])):
+            result = server.compute_data(["SignIn", "Dashboard"], 0,
+                ignore_outliers=False, configurations=["warm:offline"])
+        self.assertEqual(result["selected_count"], 10)
+        self.assertEqual(result["health"]["recent_requests"], 10)
+        flags = {r["duration_ms"]: r["is_outlier"] for r in result["recent"]}
+        self.assertFalse(flags[35])
+        self.assertFalse(flags[153])
+        for low in flags:
+            for high in flags:
+                if low < high and flags[low]:
+                    self.assertTrue(flags[high])
         self.assertEqual(server.remove_latency_outliers(
             [{"duration_ms": v} for v in [35, 100, 101, 102, 103, 104, 105, 106]])[1], 0)
 
