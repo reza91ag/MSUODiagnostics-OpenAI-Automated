@@ -39,6 +39,7 @@ dialog{border:0;border-radius:15px;padding:0;width:min(850px,94vw);box-shadow:0 
 .password-field{display:block;font-size:12px;font-weight:750;color:var(--navy);margin-bottom:7px}
 .password-input{width:100%;border:1px solid #d5e0e9;border-radius:8px;padding:11px 12px;font:inherit}
 #passwordDialog{width:min(430px,94vw)}
+.operation-picker{position:relative}.operation-options{position:absolute;z-index:20;top:100%;left:0;min-width:240px;max-height:320px;overflow:auto;background:#fff;border:1px solid #d5e0e9;border-radius:9px;box-shadow:0 8px 24px #0002;padding:8px}.operation-options[hidden]{display:none}.operation-options label{display:flex;gap:9px;align-items:center;padding:8px;cursor:pointer;white-space:nowrap}.operation-options label:hover{background:#f0f5f8}.operation-options input{accent-color:#3978a8}
 </style>
 </head>
 <body>
@@ -50,7 +51,7 @@ dialog{border:0;border-radius:15px;padding:0;width:min(850px,94vw);box-shadow:0 
   <div id="warnings"></div>
   <section class="controls">
     <div class="control-group">
-      <div class="control"><label for="operation">Operation</label><select id="operation"><option value="all">All operations</option></select></div><div class="control" style="justify-content:end"><button class="button" id="addOperationBtn" type="button">+ Add New Operation</button></div>
+      <div class="control"><label for="operationBtn">Operations</label><div class="operation-picker" id="operationPicker"><button class="button" id="operationBtn" type="button" aria-expanded="false" aria-controls="operationOptions">All operations ▾</button><div class="operation-options" id="operationOptions" hidden></div></div></div><div class="control" style="justify-content:end"><button class="button" id="addOperationBtn" type="button">+ Add New Operation</button></div>
       <div class="control"><label for="window">Average window</label><select id="window"><option value="10">Last 10</option><option value="20">Last 20</option><option value="50" selected>Last 50</option><option value="100">Last 100</option><option value="500">Last 500</option><option value="0">All requests</option></select></div>
       <div class="control" style="justify-content:center"><label for="ignoreOutliers"><input id="ignoreOutliers" type="checkbox" checked> Ignore outliers</label></div>
        <div class="control"><label for="sort">Descending by</label><select id="sort"><option value="latest">Momentary request</option><option value="mean">Average latency</option></select></div>
@@ -95,10 +96,12 @@ dialog{border:0;border-radius:15px;padding:0;width:min(850px,94vw);box-shadow:0 
 <script>
 const $ = id => document.getElementById(id);
 let data = null, config = {sources:[]}, busy = false, customOperations = [], sourcePassword = null;
+let selectedOperations = new Set(["all"]);
 const NS='http://www.w3.org/2000/svg';
 const num = v => v == null ? '—' : Number(v).toLocaleString('en-US',{maximumFractionDigits:1});
 const ms = v => v == null ? '—' : `${num(v)} ms`;
-function exportUrl(ext){return '/api/export.'+ext+'?'+new URLSearchParams({operation:$('operation').value,window:$('window').value,ignore_outliers:String($('ignoreOutliers').checked)});}
+function selectionParams(){const qs=new URLSearchParams({window:$('window').value,ignore_outliers:String($('ignoreOutliers').checked)});for(const operation of selectedOperations)qs.append('operation',operation);return qs;}
+function exportUrl(ext){return '/api/export.'+ext+'?'+selectionParams();}
 function latexUrl(){return exportUrl('tex');}
 function syncExportLinks(){$('latexExport').href=latexUrl();$('pdfExport').href=exportUrl('pdf');$('csvExport').href=exportUrl('csv');}
 function node(tag, attrs={}, text=null){const el=document.createElementNS(NS,tag);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,v);if(text!==null)el.textContent=text;return el;}
@@ -136,14 +139,25 @@ function renderRecent(records){const tbody=$('recentBody');tbody.replaceChildren
    cell(tr,r.startup_evidence,'muted');tbody.append(tr);
  }
 }
-function updateOps(ops){const select=$('operation'),previous=select.value;select.replaceChildren();const all=dom('option','All operations');all.value='all';select.append(all);for(const name of ops){const opt=dom('option',name);opt.value=name;select.append(opt);}select.value=ops.includes(previous)?previous:'all';}
-function render(d){data=d;syncExportLinks();const groups=d.groups;const available=groups.filter(g=>g.n);$('total').textContent=num(d.included_count);$('totalLabel').textContent=d.selected_operation==='all'?'Completed requests':'Operation entries';$('totalHint').textContent=`${d.selected_count} selected · ${d.excluded_count} outliers excluded · ${d.total_requests} raw lifecycles`;$('sources').textContent=`${d.sources.filter(s=>s.ok).length} / ${d.sources.length}`;$('sourcesHint').textContent=`${d.sources.reduce((a,s)=>a+s.files,0)} log files accessible`;
+function updateOps(ops){
+ const available=new Set(ops);if(!selectedOperations.has('all')){selectedOperations=new Set([...selectedOperations].filter(op=>available.has(op)));if(!selectedOperations.size)selectedOperations=new Set(['all']);}
+ const options=$('operationOptions');options.replaceChildren();
+ for(const [value,label] of [['all','All operations'],...ops.map(op=>[op,op])]){
+  const row=dom('label');const checkbox=dom('input');checkbox.type='checkbox';checkbox.value=value;checkbox.checked=selectedOperations.has(value);checkbox.onchange=()=>{
+   if(value==='all')selectedOperations=new Set(['all']);
+   else{selectedOperations.delete('all');if(checkbox.checked)selectedOperations.add(value);else selectedOperations.delete(value);if(!selectedOperations.size)selectedOperations.add('all');}
+   updateOps(ops);syncExportLinks();refresh();
+  };row.append(checkbox,dom('span',label));options.append(row);
+ }
+ $('operationBtn').textContent=selectedOperations.has('all')?'All operations ▾':selectedOperations.size===1?[...selectedOperations][0]+' ▾':selectedOperations.size+' operations selected ▾';
+}
+function render(d){data=d;syncExportLinks();const groups=d.groups;const available=groups.filter(g=>g.n);$('total').textContent=num(d.included_count);$('totalLabel').textContent=selectedOperations.has('all')?'Completed requests':'Selected operation requests';$('totalHint').textContent=`${d.selected_count} selected · ${d.excluded_count} outliers excluded · ${d.operation_requests} matching lifecycles`;$('sources').textContent=`${d.sources.filter(s=>s.ok).length} / ${d.sources.length}`;$('sourcesHint').textContent=`${d.sources.reduce((a,s)=>a+s.files,0)} log files accessible`;
  if(available.length){const best=[...available].sort((a,b)=>a.fastest_ms-b.fastest_ms)[0];$('fastest').textContent=ms(best.fastest_ms);$('fastestLabel').textContent=best.label;}else{$('fastest').textContent='—';$('fastestLabel').textContent='Awaiting samples';}
  $('lastScan').textContent=new Date(d.generated_utc).toLocaleTimeString();const ok=d.sources.some(s=>s.ok);$('status').innerHTML=`<span class="dot ${ok?'':'bad'}"></span><span>${ok?'Monitoring live':'No connected source'}</span>`;
  const warn=d.warnings.slice(0,5);$('warnings').replaceChildren();if(warn.length){const w=dom('div',warn.join('\n'),'warning');$('warnings').append(w);}
  renderChart(groups);renderSummary(groups);renderRecent(d.recent);
 }
-async function refresh(){if(busy)return;busy=true;try{const qs=new URLSearchParams({operation:$('operation').value,window:$('window').value,ignore_outliers:String($('ignoreOutliers').checked)});const res=await fetch(`/api/data?${qs}`,{cache:'no-store'});if(!res.ok)throw Error(`HTTP ${res.status}`);const d=await res.json();const previous=$('operation').value;updateOps(d.operations);if(previous!==$('operation').value){busy=false;return refresh();}render(d);}catch(e){$('status').innerHTML='<span class="dot bad"></span><span>Console unavailable</span>';$('warnings').replaceChildren(dom('div',e.message,'warning'));}finally{busy=false;}}
+async function refresh(){if(busy)return;busy=true;try{const qs=selectionParams();const res=await fetch(`/api/data?${qs}`,{cache:'no-store'});if(!res.ok)throw Error(`HTTP ${res.status}`);const d=await res.json();const previous=[...selectedOperations].join('\u0000');updateOps(d.operations);if(previous!==[...selectedOperations].join('\u0000')){busy=false;return refresh();}render(d);}catch(e){$('status').innerHTML='<span class="dot bad"></span><span>Console unavailable</span>';$('warnings').replaceChildren(dom('div',e.message,'warning'));}finally{busy=false;}}
 function makeSourceRow(source={name:'',path:'',persistence:'direct',startup:'auto',filenames:''}){
  const card=dom('div','','source-card'),grid=dom('div','','source-grid');
  const fields=[['Name','name','text'],['Folder / UNC path','path','text'],['Persistence','persistence','select'],['Startup default','startup','select'],['Log filename(s) (optional)','filenames','text']];
@@ -237,7 +251,7 @@ $('exportBtn').onclick=()=>{const open=exportMenu.classList.toggle('open');$('ex
 document.addEventListener('click',e=>{if(!exportMenu.contains(e.target))closeExportMenu();});
 exportMenu.addEventListener('keydown',e=>{if(e.key==='Escape'){closeExportMenu();$('exportBtn').blur();}});
 $('exportOptions').addEventListener('click',e=>{if(e.target.closest('a,button'))closeExportMenu();});
-$('operation').onchange=()=>{syncExportLinks();refresh();};$('window').onchange=()=>{syncExportLinks();refresh();};$('ignoreOutliers').onchange=()=>{syncExportLinks();busy=false;refresh();};$('sort').onchange=()=>{if(data){renderChart(data.groups);renderSummary(data.groups);}};$('display').onchange=()=>{if(data)renderChart(data.groups);};
+$('operationBtn').onclick=()=>{const panel=$('operationOptions');panel.hidden=!panel.hidden;$('operationBtn').setAttribute('aria-expanded',String(!panel.hidden));};document.addEventListener('click',e=>{if(!$('operationPicker').contains(e.target)){$('operationOptions').hidden=true;$('operationBtn').setAttribute('aria-expanded','false');}});$('window').onchange=()=>{syncExportLinks();refresh();};$('ignoreOutliers').onchange=()=>{syncExportLinks();busy=false;refresh();};$('sort').onchange=()=>{if(data){renderChart(data.groups);renderSummary(data.groups);}};$('display').onchange=()=>{if(data)renderChart(data.groups);};
 syncExportLinks();refresh();setInterval(refresh,2000);
 </script>
 </body>
