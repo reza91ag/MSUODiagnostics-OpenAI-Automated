@@ -97,14 +97,16 @@ class WatchDogParserTests(unittest.TestCase):
         self.assertFalse(operational["temporal_cluster"])
         self.assertEqual(operational["affected_operations"][0]["operation"], "A")
 
-    def test_outliers_never_compare_different_operations_or_sources(self):
+    def test_outliers_group_by_operation_and_configuration_across_sources(self):
         from datetime import datetime, timedelta, timezone
         start = datetime(2026, 1, 1, tzinfo=timezone.utc)
         records = []
+        # The same operation/configuration shares a baseline across sources.
+        # Different operations and configurations must not share it.
         for source, operation, startup, persistence, base in [
             ("AppA", "SignIn", "warm", "direct", 100),
+            ("AppB", "SignIn", "warm", "direct", 100),
             ("AppA", "Dashboard", "warm", "direct", 10000),
-            ("AppB", "SignIn", "warm", "direct", 50000),
             ("AppA", "SignIn", "cold", "direct", 90000),
             ("AppA", "SignIn", "warm", "offline", 120000),
         ]:
@@ -114,14 +116,18 @@ class WatchDogParserTests(unittest.TestCase):
                     "persistence": persistence, "duration_ms": base + i,
                     "end_utc": (start + timedelta(seconds=len(records))).isoformat()})
         self.assertEqual(server.classify_latency_outliers(records), set())
-        records[0]["duration_ms"] = 5000
-        self.assertEqual(server.classify_latency_outliers(records), {records[0]["id"]})
-        records[0]["end_utc"] = (start + timedelta(seconds=100)).isoformat()
-        health = server.latency_health(records, {records[0]["id"]})
-        self.assertEqual(health["affected_operations"][0]["source"], "AppA")
+        slow = records[0]
+        slow["duration_ms"] = 5000
+        self.assertEqual(server.classify_latency_outliers(records), {slow["id"]})
+        slow["end_utc"] = (start + timedelta(seconds=100)).isoformat()
+        health = server.latency_health(records, {slow["id"]})
+        self.assertEqual(health["affected_operations"][0]["source"], "All selected sources")
         self.assertEqual(health["affected_operations"][0]["operation"], "SignIn")
         self.assertEqual(health["affected_operations"][0]["startup"], "warm")
         self.assertEqual(health["affected_operations"][0]["persistence"], "direct")
+        # Unusually fast samples are not slow-latency outliers.
+        self.assertEqual(server.remove_latency_outliers(
+            [{"duration_ms": v} for v in [35, 100, 101, 102, 103, 104, 105, 106]])[1], 0)
 
     def test_outlier_detection_uses_full_history_not_display_window(self):
         from datetime import datetime, timedelta, timezone
