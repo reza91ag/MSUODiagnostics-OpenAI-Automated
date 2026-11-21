@@ -582,7 +582,7 @@ def compute_data(operation="all", window=50, ignore_outliers=True, startup="all"
         "excluded_count": excluded_count, "selected_count": selected_count,
         "included_count": len(included_records),
         "health": latency_health(health_records, health_excluded_ids),
-        "groups": groups, "recent": sorted(included_records, key=lambda r: r["end_utc"], reverse=True),
+        "groups": groups, "recent": sorted(({**r, "is_outlier": r["id"] in health_excluded_ids} for r in included_records), key=lambda r: r["end_utc"], reverse=True),
         "export_records": included_records,
         "sources": statuses, "warnings": warnings,
     }
