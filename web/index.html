@@ -34,7 +34,7 @@ dialog{border:0;border-radius:15px;padding:0;width:min(850px,94vw);box-shadow:0 
 .operation-fields input{width:100%;border:1px solid #d5e0e9;border-radius:7px;padding:10px;color:var(--navy)}
 .operation-list{margin:12px 0}.operation-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;margin:6px 0;background:#f9fbfd}
 .operation-item code{font-size:11px;color:var(--muted);overflow-wrap:anywhere}.operation-item strong{display:block;font-size:12px}
-@media(max-width:600px){.operation-fields{grid-template-columns:1fr}}
+@media(max-width:600px){.operation-fields{grid-template-columns:1fr}.export-options{left:0;right:auto;top:calc(100% + 6px);max-width:calc(100vw - 30px)}}
 @media(max-width:1000px){.metrics{grid-template-columns:repeat(2,1fr)}.source-grid{grid-template-columns:1fr 1fr}.source-grid .filename-field{grid-column:1/-1}.shell{padding:16px 15px 40px}}@media(max-width:600px){.metrics{grid-template-columns:1fr 1fr}.metric{padding:12px}.metric strong{font-size:22px}header{align-items:start;flex-direction:column}.panel-head{padding:17px 16px 8px}.chart-wrap{padding:5px 9px}.controls{padding:12px}.source-grid{grid-template-columns:1fr}}
 .password-field{display:block;font-size:12px;font-weight:750;color:var(--navy);margin-bottom:7px}
 .password-input{width:100%;border:1px solid #d5e0e9;border-radius:8px;padding:11px 12px;font:inherit}
