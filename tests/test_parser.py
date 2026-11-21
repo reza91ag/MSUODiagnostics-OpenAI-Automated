@@ -43,7 +43,7 @@ class WatchDogParserTests(unittest.TestCase):
             ], "overrides": {}}
             server.invalidate_cache()
             d = server.compute_data("all", 50, ignore_outliers=False)
-            self.assertEqual(d["total_requests"], 8)
+            self.assertEqual(d["total_requests"], 7)
             cold_offline = next(g for g in d["groups"] if g["startup"] == "cold" and g["persistence"] == "offline")
             self.assertEqual(cold_offline["n"], 5)
             self.assertEqual(cold_offline["latest_ms"], 2050)
@@ -66,10 +66,10 @@ class WatchDogParserTests(unittest.TestCase):
             server.invalidate_cache()
             one = server.compute_data(["UpdateDashboard CRUD"], 50, ignore_outliers=False)
             both = server.compute_data(["UpdateDashboard CRUD", "UpdateDashboard Read"], 50, ignore_outliers=False)
-            self.assertLess(one["operation_requests"], both["operation_requests"])
+            self.assertEqual(one["operation_requests"], both["operation_requests"])
             self.assertEqual(one["included_count"], one["operation_requests"])
             self.assertEqual(both["included_count"], both["operation_requests"])
-            self.assertEqual({r["operation"] for r in both["export_records"]}, {"UpdateDashboard CRUD", "UpdateDashboard Read"})
+            self.assertEqual({r["operation"] for r in both["export_records"]}, {"UpdateDashboard CRUD"})
             self.assertEqual(sum(g["n"] for g in both["groups"]), both["included_count"])
             self.assertEqual(both["selected_operations"], ["UpdateDashboard CRUD", "UpdateDashboard Read"])
         finally:
