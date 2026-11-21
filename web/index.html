@@ -39,6 +39,14 @@ dialog{border:0;border-radius:15px;padding:0;width:min(850px,94vw);box-shadow:0 
 .password-field{display:block;font-size:12px;font-weight:750;color:var(--navy);margin-bottom:7px}
 .password-input{width:100%;border:1px solid #d5e0e9;border-radius:8px;padding:11px 12px;font:inherit}
 #passwordDialog{width:min(430px,94vw)}
+.health-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:12px 20px 20px}
+.health-overview>div{padding:12px;background:#f4f8fa;border-radius:8px}
+.health-overview small{display:block;color:#5e7382}.health-overview strong{display:block;margin-top:5px;font-size:19px;color:#19364a}
+.health-detail-inner{padding:0 20px 20px}.health-sequence{display:flex;gap:3px;flex-wrap:wrap;margin:12px 0 20px}
+.health-sequence i{width:10px;height:23px;border-radius:3px;background:#b8c8d2}
+.health-sequence i.anomaly{background:#d45a4d}
+.health-status-healthy{color:#17815b}.health-status-sporadic{color:#b57615}.health-status-localized{color:#c3473a}
+@media(max-width:600px){.health-overview{grid-template-columns:1fr}}
 .operation-picker{position:relative}.operation-options{position:absolute;z-index:20;top:100%;left:0;min-width:240px;max-height:320px;overflow:auto;background:#fff;border:1px solid #d5e0e9;border-radius:9px;box-shadow:0 8px 24px #0002;padding:8px}.operation-options[hidden]{display:none}.operation-options label{display:flex;gap:9px;align-items:center;padding:8px;cursor:pointer;white-space:nowrap}.operation-options label:hover{background:#f0f5f8}.operation-options input{accent-color:#3978a8}
 </style>
 </head>
@@ -64,6 +72,11 @@ dialog{border:0;border-radius:15px;padding:0;width:min(850px,94vw);box-shadow:0 
     <div class="metric"><small>Fastest momentary</small><strong id="fastest">—</strong><span class="hint" id="fastestLabel">Awaiting samples</span></div>
     <div class="metric"><small>Monitored sources</small><strong id="sources">—</strong><span class="hint" id="sourcesHint">UNC / mapped folders</span></div>
     <div class="metric"><small>Last scan</small><strong id="lastScan" style="font-size:22px">—</strong><span class="hint">Times shown in local browser time</span></div>
+  </section>
+  <section class="panel" id="healthPanel">
+    <div class="panel-head"><div><h2>Latency Health</h2><p>Request-distance and anomaly clustering · diagnostic signal, not root-cause attribution</p></div><button class="button" id="healthToggle" type="button" aria-expanded="false" aria-controls="healthDetails"><span id="healthBadge">Awaiting samples</span> ▾</button></div>
+    <div class="health-overview"><div><small>Requests since last anomaly</small><strong id="healthDistance">—</strong></div><div><small>Excluded / recent requests</small><strong id="healthCount">—</strong></div><div><small>Localization</small><strong id="healthLocalization">—</strong></div></div>
+    <div id="healthDetails" hidden><div class="health-detail-inner"><p class="muted">Recent requests, oldest to newest. Red indicates an excluded latency anomaly.</p><div id="healthSequence" class="health-sequence"></div><h3>Affected operations</h3><div class="table-wrap"><table><thead><tr><th>Operation</th><th>Excluded</th><th>Requests</th><th>Rate</th><th>Concentration</th></tr></thead><tbody id="healthOperations"></tbody></table></div><p class="muted">Temporal cluster: at least 3 exclusions within 5 requests. Operational concentration: at least 3 exclusions among 5+ requests, at least half of anomalies, and an exclusion rate of at least 20% and twice that of other operations. Based on the last 30 selected requests; independent of the Ignore outliers display toggle.</p></div></div>
   </section>
   <section class="panel">
     <div class="panel-head"><div><h2>Lifecycle latency · Descending</h2><p>Momentary request vs rolling average, grouped by startup and persistence strategy</p></div><div class="legend"><span><i class="swatch" style="background:#3978a8"></i>Momentary</span><span><i class="swatch" style="background:#a4bdd0"></i>Average</span><span><i class="swatch" style="background:#138b82"></i>Fastest observed (marker)</span></div></div>
@@ -151,7 +164,19 @@ function updateOps(ops){
  }
  $('operationBtn').textContent=selectedOperations.has('all')?'All operations ▾':selectedOperations.size===1?[...selectedOperations][0]+' ▾':selectedOperations.size+' operations selected ▾';
 }
-function render(d){data=d;syncExportLinks();const groups=d.groups;const available=groups.filter(g=>g.n);$('total').textContent=num(d.included_count);$('totalLabel').textContent=selectedOperations.has('all')?'Completed requests':'Selected operation requests';$('totalHint').textContent=`${d.selected_count} selected · ${d.excluded_count} outliers excluded · ${d.operation_requests} matching lifecycles`;$('sources').textContent=`${d.sources.filter(s=>s.ok).length} / ${d.sources.length}`;$('sourcesHint').textContent=`${d.sources.reduce((a,s)=>a+s.files,0)} log files accessible`;
+function renderHealth(health){
+ const names={healthy:'Healthy',sporadic:'Sporadic instability',localized:'Localized instability'};
+ const badge=$('healthBadge');badge.textContent=names[health.status]||'Unknown';badge.className='health-status-'+health.status;
+ $('healthDistance').textContent=health.requests_since_last_exclusion==null?'None observed':String(health.requests_since_last_exclusion);
+ $('healthCount').textContent=health.recent_excluded+' / '+health.recent_requests;
+ $('healthLocalization').textContent=health.temporal_cluster&&health.operational_cluster?'Temporal + operational':health.temporal_cluster?'Temporal':health.operational_cluster?'Operational':'None detected';
+ const sequence=$('healthSequence');sequence.replaceChildren();
+ for(const flag of health.sequence){const marker=dom('i');if(flag)marker.className='anomaly';marker.title=flag?'Excluded anomaly':'Normal request';sequence.append(marker);}
+ const tbody=$('healthOperations');tbody.replaceChildren();
+ for(const op of health.affected_operations){const tr=dom('tr');cell(tr,op.operation);cell(tr,String(op.excluded));cell(tr,String(op.requests));cell(tr,op.rate_pct+'%');cell(tr,op.concentrated?'Concentrated':'Not concentrated');tbody.append(tr);}
+ if(!health.affected_operations.length){const tr=dom('tr');const td=cell(tr,'No anomalies in recent requests.');td.colSpan=5;tbody.append(tr);}
+}
+function render(d){data=d;renderHealth(d.health);syncExportLinks();const groups=d.groups;const available=groups.filter(g=>g.n);$('total').textContent=num(d.included_count);$('totalLabel').textContent=selectedOperations.has('all')?'Completed requests':'Selected operation requests';$('totalHint').textContent=`${d.selected_count} selected · ${d.excluded_count} outliers excluded · ${d.operation_requests} matching lifecycles`;$('sources').textContent=`${d.sources.filter(s=>s.ok).length} / ${d.sources.length}`;$('sourcesHint').textContent=`${d.sources.reduce((a,s)=>a+s.files,0)} log files accessible`;
  if(available.length){const best=[...available].sort((a,b)=>a.fastest_ms-b.fastest_ms)[0];$('fastest').textContent=ms(best.fastest_ms);$('fastestLabel').textContent=best.label;}else{$('fastest').textContent='—';$('fastestLabel').textContent='Awaiting samples';}
  $('lastScan').textContent=new Date(d.generated_utc).toLocaleTimeString();const ok=d.sources.some(s=>s.ok);$('status').innerHTML=`<span class="dot ${ok?'':'bad'}"></span><span>${ok?'Monitoring live':'No connected source'}</span>`;
  const warn=d.warnings.slice(0,5);$('warnings').replaceChildren();if(warn.length){const w=dom('div',warn.join('\n'),'warning');$('warnings').append(w);}
@@ -251,6 +276,7 @@ $('exportBtn').onclick=()=>{const open=exportMenu.classList.toggle('open');$('ex
 document.addEventListener('click',e=>{if(!exportMenu.contains(e.target))closeExportMenu();});
 exportMenu.addEventListener('keydown',e=>{if(e.key==='Escape'){closeExportMenu();$('exportBtn').blur();}});
 $('exportOptions').addEventListener('click',e=>{if(e.target.closest('a,button'))closeExportMenu();});
+$('healthToggle').onclick=()=>{const details=$('healthDetails');details.hidden=!details.hidden;$('healthToggle').setAttribute('aria-expanded',String(!details.hidden));};
 $('operationBtn').onclick=()=>{const panel=$('operationOptions');panel.hidden=!panel.hidden;$('operationBtn').setAttribute('aria-expanded',String(!panel.hidden));};document.addEventListener('click',e=>{if(!$('operationPicker').contains(e.target)){$('operationOptions').hidden=true;$('operationBtn').setAttribute('aria-expanded','false');}});$('window').onchange=()=>{syncExportLinks();refresh();};$('ignoreOutliers').onchange=()=>{syncExportLinks();busy=false;refresh();};$('sort').onchange=()=>{if(data){renderChart(data.groups);renderSummary(data.groups);}};$('display').onchange=()=>{if(data)renderChart(data.groups);};
 syncExportLinks();refresh();setInterval(refresh,2000);
 </script>
