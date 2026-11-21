@@ -560,6 +560,8 @@ def compute_data(operation="all", window=50, ignore_outliers=True, startup="all"
         cohort = [r for r in health_records if r["startup"] == group["startup"]
                   and r["persistence"] == group["persistence"]]
         health_excluded_ids.update(classify_latency_outliers(cohort))
+    # Use the same detected anomalies for health and the Ignore outliers control.
+    all_excluded_ids = health_excluded_ids
     if ignore_outliers:
         included_records = [r for r in health_records if r["id"] not in all_excluded_ids]
         excluded_count = len(all_excluded_ids)
