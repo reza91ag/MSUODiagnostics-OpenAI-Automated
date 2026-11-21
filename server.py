@@ -416,8 +416,8 @@ def available_operations(records, custom_mappings=()):
 def remove_latency_outliers(selected):
     """Exclude unusually slow latency values using upper-tail MAD/IQR.
 
-    This is applied independently within each operation/startup/persistence
-    cohort after operation, configuration and window selection.
+    This is applied to the joint result of the operation and configuration
+    filters after window selection.
     """
     if len(selected) < 4:
         return selected, 0
@@ -437,12 +437,12 @@ def remove_latency_outliers(selected):
 
 
 def comparison_key(record):
-    """Outlier baseline: selected operation and startup/persistence configuration."""
-    return (record["operation"], record["startup"], record["persistence"])
+    """One outlier baseline for the joint operation/configuration filter result."""
+    return ("selected-filter-result",)
 
 
 def classify_latency_outliers(records):
-    """Apply upper-tail MAD/IQR per operation and configuration."""
+    """Apply upper-tail MAD/IQR to the jointly filtered selected sample."""
     cohorts = {}
     for record in records:
         cohorts.setdefault(comparison_key(record), []).append(record)
@@ -460,8 +460,8 @@ def latency_health(records, excluded_ids):
     affected = {}
     for record in recent:
         key = comparison_key(record)
-        item = affected.setdefault(key, {"source": "All selected sources", "operation": key[0],
-            "startup": key[1], "persistence": key[2], "requests": 0, "excluded": 0})
+        item = affected.setdefault(key, {"source": "All selected sources", "operation": "Selected operations",
+            "startup": "Selected", "persistence": "Selected", "requests": 0, "excluded": 0})
         item["requests"] += 1
         item["excluded"] += int(record["id"] in excluded_ids)
     count = sum(flags)
