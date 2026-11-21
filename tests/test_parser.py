@@ -76,6 +76,28 @@ class WatchDogParserTests(unittest.TestCase):
             server.CONFIG = original
             server.invalidate_cache()
 
+    def test_dashboard_read_excluded_from_benchmarks_and_operations(self):
+        from unittest.mock import patch
+        records = [
+            {"id": "read", "operation": "UpdateDashboard Read", "startup": "warm",
+             "persistence": "direct", "duration_ms": 2935,
+             "end_utc": "2026-11-20T12:00:03+00:00"},
+            {"id": "signup", "operation": "SignUp", "startup": "cold",
+             "persistence": "direct", "duration_ms": 4239,
+             "end_utc": "2026-11-20T12:00:02+00:00"},
+        ]
+        self.assertNotIn("UpdateDashboard Read", server.available_operations(
+            records, [{"name": "UpdateDashboard Read", "action": "UpdateDashboard"}]))
+        with patch.object(server, "get_scan", return_value=(records, [], [])):
+            for ignore_outliers in (False, True):
+                result = server.compute_data("all", 0, ignore_outliers=ignore_outliers)
+                self.assertEqual(result["total_requests"], 1)
+                self.assertEqual(result["included_count"], 1)
+                self.assertEqual(result["export_records"][0]["operation"], "SignUp")
+                self.assertEqual(result["export_records"][0]["duration_ms"], 4239)
+                self.assertNotIn("UpdateDashboard Read",
+                                 {row["operation"] for row in result["recent"]})
+
     def test_latency_health_states_and_operation_localization(self):
         from datetime import datetime, timedelta, timezone
         def samples(operations, excluded):
