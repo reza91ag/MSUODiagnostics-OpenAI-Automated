@@ -116,6 +116,7 @@ class WatchDogParserTests(unittest.TestCase):
         self.assertEqual(server.classify_latency_outliers(records), set())
         records[0]["duration_ms"] = 5000
         self.assertEqual(server.classify_latency_outliers(records), {records[0]["id"]})
+        records[0]["end_utc"] = (start + timedelta(seconds=100)).isoformat()
         health = server.latency_health(records, {records[0]["id"]})
         self.assertEqual(health["affected_operations"][0]["source"], "AppA")
         self.assertEqual(health["affected_operations"][0]["operation"], "SignIn")
