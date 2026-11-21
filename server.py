@@ -414,11 +414,10 @@ def available_operations(records, custom_mappings=()):
 
 
 def remove_latency_outliers(selected):
-    """Median absolute deviation filter, independently per configuration.
+    """Exclude unusually slow latency values using upper-tail MAD/IQR.
 
-    The median/MAD rule remains sensitive to slow-tail anomalies when IQR
-    fences become too wide on skewed latency samples. If MAD is zero, use
-    the IQR fence as a fallback. Never mutate original measurements.
+    This is applied independently within each operation/startup/persistence
+    cohort after operation, configuration and window selection.
     """
     if len(selected) < 4:
         return selected, 0
@@ -426,26 +425,24 @@ def remove_latency_outliers(selected):
     center = statistics.median(values)
     mad = statistics.median(abs(v - center) for v in values)
     if mad > 0:
-        # Modified Z-score: 0.6745 * |x - median| / MAD > 3.5.
-        threshold = 3.5 * mad / 0.6745
-        low, high = center - threshold, center + threshold
+        high = center + 3.5 * mad / 0.6745
     else:
         q1, q3 = percentile(values, .25), percentile(values, .75)
         iqr = q3 - q1
         if iqr == 0:
             return selected, 0
-        low, high = q1 - 1.5 * iqr, q3 + 1.5 * iqr
-    included = [r for r in selected if low <= r["duration_ms"] <= high]
+        high = q3 + 1.5 * iqr
+    included = [r for r in selected if r["duration_ms"] <= high]
     return included, len(selected) - len(included)
 
 
 def comparison_key(record):
-    """Only equivalent requests may define one another's latency baseline."""
-    return (record["source"], record["operation"], record["startup"], record["persistence"])
+    """Outlier baseline: selected operation and startup/persistence configuration."""
+    return (record["operation"], record["startup"], record["persistence"])
 
 
 def classify_latency_outliers(records):
-    """Apply MAD/IQR independently to source/operation/startup/persistence cohorts."""
+    """Apply upper-tail MAD/IQR per operation and configuration."""
     cohorts = {}
     for record in records:
         cohorts.setdefault(comparison_key(record), []).append(record)
@@ -456,7 +453,6 @@ def classify_latency_outliers(records):
         excluded_ids.update(record["id"] for record in cohort if record["id"] not in included_ids)
     return excluded_ids
 
-
 def latency_health(records, excluded_ids):
     """Report anomalies per equivalent cohort; aggregate status without pooling latencies."""
     recent = sorted(records, key=lambda r: r["end_utc"], reverse=True)
@@ -464,8 +460,8 @@ def latency_health(records, excluded_ids):
     affected = {}
     for record in recent:
         key = comparison_key(record)
-        item = affected.setdefault(key, {"source": key[0], "operation": key[1],
-            "startup": key[2], "persistence": key[3], "requests": 0, "excluded": 0})
+        item = affected.setdefault(key, {"source": "All selected sources", "operation": key[0],
+            "startup": key[1], "persistence": key[2], "requests": 0, "excluded": 0})
         item["requests"] += 1
         item["excluded"] += int(record["id"] in excluded_ids)
     count = sum(flags)
@@ -578,7 +574,7 @@ def compute_data(operation="all", window=50, ignore_outliers=True, startup="all"
         "operations": available_operations(records, CONFIG.get("operations", [])),
         "selected_operation": selected_operations[0] if len(selected_operations) == 1 else "multiple",
         "selected_operations": selected_operations, "selected_configurations": configurations, "window": window,
-        "ignore_outliers": ignore_outliers, "outlier_method": "Modified Z-score (MAD, 3.5); IQR fallback",
+        "ignore_outliers": ignore_outliers, "outlier_method": "Upper-tail modified Z-score (MAD, 3.5); upper IQR fallback",
         "excluded_count": excluded_count, "selected_count": selected_count,
         "included_count": len(included_records),
         "health": latency_health(health_records, health_excluded_ids),
