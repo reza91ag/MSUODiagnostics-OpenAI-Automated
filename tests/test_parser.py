@@ -81,7 +81,8 @@ class WatchDogParserTests(unittest.TestCase):
         def samples(operations, excluded):
             start = datetime(2026, 1, 1, tzinfo=timezone.utc)
             rows = [{"id": str(i), "operation": op,
-                     "end_utc": (start + timedelta(seconds=i)).isoformat()}
+                     "end_utc": (start + timedelta(seconds=i)).isoformat(),
+                     "source": "App", "startup": "warm", "persistence": "direct"}
                     for i, op in enumerate(operations)]
             return server.latency_health(rows, {str(i) for i in excluded})
         self.assertEqual(samples(["A"] * 30, [])["status"], "healthy")
@@ -95,6 +96,31 @@ class WatchDogParserTests(unittest.TestCase):
         self.assertTrue(operational["operational_cluster"])
         self.assertFalse(operational["temporal_cluster"])
         self.assertEqual(operational["affected_operations"][0]["operation"], "A")
+
+    def test_outliers_never_compare_different_operations_or_sources(self):
+        from datetime import datetime, timedelta, timezone
+        start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        records = []
+        for source, operation, startup, persistence, base in [
+            ("AppA", "SignIn", "warm", "direct", 100),
+            ("AppA", "Dashboard", "warm", "direct", 10000),
+            ("AppB", "SignIn", "warm", "direct", 50000),
+            ("AppA", "SignIn", "cold", "direct", 90000),
+            ("AppA", "SignIn", "warm", "offline", 120000),
+        ]:
+            for i in range(8):
+                records.append({"id": f"{source}-{operation}-{startup}-{persistence}-{i}",
+                    "source": source, "operation": operation, "startup": startup,
+                    "persistence": persistence, "duration_ms": base + i,
+                    "end_utc": (start + timedelta(seconds=len(records))).isoformat()})
+        self.assertEqual(server.classify_latency_outliers(records), set())
+        records[0]["duration_ms"] = 5000
+        self.assertEqual(server.classify_latency_outliers(records), {records[0]["id"]})
+        health = server.latency_health(records, {records[0]["id"]})
+        self.assertEqual(health["affected_operations"][0]["source"], "AppA")
+        self.assertEqual(health["affected_operations"][0]["operation"], "SignIn")
+        self.assertEqual(health["affected_operations"][0]["startup"], "warm")
+        self.assertEqual(health["affected_operations"][0]["persistence"], "direct")
 
     def test_outlier_toggle_changes_statistics(self):
         samples = [{"duration_ms": v} for v in (50, 55, 60, 65, 70, 75, 80, 90, 1000)]
