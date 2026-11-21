@@ -553,7 +553,7 @@ def compute_data(operation="all", window=50, ignore_outliers=True, startup="all"
                            "median_ms": None, "p95_ms": None, "stddev_ms": None,
                            "divergence_ms": None, "divergence_pct": None, "latest_utc": None})
     # Classify exactly the same selected samples used by statistics and exports.
-    all_excluded_ids = classify_latency_outliers(health_records)
+    all_excluded_ids = set().union(*(classify_latency_outliers([r for r in health_records if r["startup"] == startup and r["persistence"] == persistence]) for startup, persistence in (("cold", "offline"), ("cold", "direct"), ("warm", "direct"), ("warm", "offline"))))
     health_excluded_ids = {r["id"] for r in health_records if r["id"] in all_excluded_ids}
     if ignore_outliers:
         included_records = [r for r in health_records if r["id"] not in health_excluded_ids]
