@@ -459,16 +459,16 @@ def latency_health(records, excluded_ids):
     flags = [r["id"] in excluded_ids for r in recent]
     affected = {}
     for record in recent:
-        key = comparison_key(record)
-        item = affected.setdefault(key, {"source": "All selected sources", "operation": "Selected operations",
-            "startup": "Selected", "persistence": "Selected", "requests": 0, "excluded": 0})
+        key = (record["operation"], record["startup"], record["persistence"])
+        item = affected.setdefault(key, {"source": "All selected sources", "operation": key[0],
+            "startup": key[1], "persistence": key[2], "requests": 0, "excluded": 0})
         item["requests"] += 1
         item["excluded"] += int(record["id"] in excluded_ids)
     count = sum(flags)
     # Temporal clustering must also occur within one comparable cohort.
     temporal = False
     for key in affected:
-        cohort_flags = [r["id"] in excluded_ids for r in recent if comparison_key(r) == key]
+        cohort_flags = [r["id"] in excluded_ids for r in recent if (r["operation"], r["startup"], r["persistence"]) == key]
         if any(sum(cohort_flags[i:i + 5]) >= 3 for i in range(max(0, len(cohort_flags) - 4))):
             temporal = True
     for item in affected.values():
