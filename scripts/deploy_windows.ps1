@@ -43,7 +43,7 @@ function Wait-ForDashboard([int]$TimeoutSeconds) {
             $pdf = Invoke-WebRequest -Uri "http://127.0.0.1:$Port/api/export.pdf" -UseBasicParsing -TimeoutSec 6
             $stage = 'logo'
             $logo = Invoke-WebRequest -Uri "http://127.0.0.1:$Port/assets/msuo-logo.svg" -UseBasicParsing -TimeoutSec 6
-            $pageOK = $page.StatusCode -eq 200 -and $page.Content -match 'MSUO'
+            $pageOK = $page.StatusCode -eq 200 -and $page.Content -match 'MSUO' -and $page.Content.Contains('.export-options{left:0;right:auto;top:calc(100% + 6px)')
             $latexText = if ($latex.Content -is [byte[]]) {
                 [System.Text.Encoding]::UTF8.GetString($latex.Content)
             } else {
