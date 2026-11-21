@@ -123,6 +123,28 @@ class WatchDogParserTests(unittest.TestCase):
         self.assertEqual(health["affected_operations"][0]["startup"], "warm")
         self.assertEqual(health["affected_operations"][0]["persistence"], "direct")
 
+    def test_outlier_detection_uses_full_history_not_display_window(self):
+        from datetime import datetime, timedelta, timezone
+        from unittest.mock import patch
+        start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        records = []
+        # Newest 10 are normal; one old anomaly must still be identified globally.
+        for i, latency in enumerate([1000] + [100 + (j % 5) for j in range(1, 40)]):
+            records.append({"id": str(i), "source": "App", "operation": "SignIn",
+                "startup": "warm", "persistence": "direct", "duration_ms": latency,
+                "end_utc": (start + timedelta(seconds=i)).isoformat()})
+        records.reverse()
+        with patch.object(server, "get_scan", return_value=(records, [], [])):
+            full = server.compute_data("all", 0, ignore_outliers=True)
+            unfiltered = server.compute_data("all", 0, ignore_outliers=False)
+            recent = server.compute_data("all", 10, ignore_outliers=True)
+        self.assertEqual(full["excluded_count"], 1)
+        self.assertEqual(full["included_count"], 39)
+        self.assertEqual(unfiltered["included_count"], 40)
+        self.assertEqual(recent["excluded_count"], 0)
+        self.assertEqual(recent["included_count"], 10)
+        self.assertNotIn("0", {r["id"] for r in full["export_records"]})
+
     def test_outlier_toggle_changes_statistics(self):
         samples = [{"duration_ms": v} for v in (50, 55, 60, 65, 70, 75, 80, 90, 1000)]
         included, excluded = server.remove_latency_outliers(samples)
