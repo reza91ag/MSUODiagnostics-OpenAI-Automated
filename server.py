@@ -439,6 +439,36 @@ def remove_latency_outliers(selected):
     return included, len(selected) - len(included)
 
 
+def latency_health(records, excluded_ids):
+    """Classify request-sequence latency anomalies, not infrastructure root causes."""
+    recent = sorted(records, key=lambda r: r["end_utc"], reverse=True)[:30]
+    flags = [r["id"] in excluded_ids for r in recent]
+    affected = {}
+    for r in recent:
+        item = affected.setdefault(r["operation"], {"operation": r["operation"], "requests": 0, "excluded": 0})
+        item["requests"] += 1
+        item["excluded"] += int(r["id"] in excluded_ids)
+    count = sum(flags)
+    temporal = any(sum(flags[i:i + 5]) >= 3 for i in range(max(0, len(flags) - 4)))
+    for item in affected.values():
+        item["rate_pct"] = round(100 * item["excluded"] / item["requests"], 1)
+        other_n = len(recent) - item["requests"]
+        other_rate = (count - item["excluded"]) / other_n if other_n else 0
+        item["concentrated"] = (item["requests"] >= 5 and item["excluded"] >= 3
+            and item["excluded"] / max(1, count) >= .5
+            and item["excluded"] / item["requests"] >= max(.2, 2 * other_rate))
+    operational = any(x["concentrated"] for x in affected.values())
+    distance = next((i for i, r in enumerate(sorted(records, key=lambda r: r["end_utc"], reverse=True))
+                     if r["id"] in excluded_ids), None)
+    return {"status": "localized" if temporal or operational else "sporadic" if count else "healthy",
+            "requests_since_last_exclusion": distance, "recent_requests": len(recent),
+            "recent_excluded": count, "temporal_cluster": temporal,
+            "operational_cluster": operational,
+            "affected_operations": sorted((x for x in affected.values() if x["excluded"]),
+                                          key=lambda x: (-x["excluded"], -x["rate_pct"])),
+            "sequence": [int(x) for x in reversed(flags)]}
+
+
 def compute_data(operation="all", window=50, ignore_outliers=True):
     records, statuses, warnings = get_scan()
     selected_operations = [operation] if isinstance(operation, str) else list(operation)
@@ -448,6 +478,8 @@ def compute_data(operation="all", window=50, ignore_outliers=True):
     filtered = records if selected_operations == ["all"] else [r for r in records if r["operation"] in selected_operations]
     groups = []
     included_records = []
+    health_records = []
+    health_excluded_ids = set()
     excluded_count = 0
     selected_count = 0
     for startup, persistence in (("cold", "offline"), ("cold", "direct"),
@@ -456,9 +488,13 @@ def compute_data(operation="all", window=50, ignore_outliers=True):
         selected = matching if window == 0 else matching[:window]
         selected_count += len(selected)
         before_filter_count = len(selected)
+        health_records.extend(selected)
+        clean, _ = remove_latency_outliers(selected)
+        clean_ids = {r["id"] for r in clean}
+        health_excluded_ids.update(r["id"] for r in selected if r["id"] not in clean_ids)
         if ignore_outliers:
-            selected, excluded = remove_latency_outliers(selected)
-            excluded_count += excluded
+            selected = clean
+            excluded_count += before_filter_count - len(selected)
         included_records.extend(selected)
         values = [r["duration_ms"] for r in selected]
         if values:
@@ -495,6 +531,7 @@ def compute_data(operation="all", window=50, ignore_outliers=True):
         "ignore_outliers": ignore_outliers, "outlier_method": "Modified Z-score (MAD, 3.5); IQR fallback",
         "excluded_count": excluded_count, "selected_count": selected_count,
         "included_count": len(included_records),
+        "health": latency_health(health_records, health_excluded_ids),
         "groups": groups, "recent": sorted(included_records, key=lambda r: r["end_utc"], reverse=True)[:50],
         "export_records": included_records,
         "sources": statuses, "warnings": warnings,
