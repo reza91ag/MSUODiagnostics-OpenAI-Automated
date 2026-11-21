@@ -413,14 +413,28 @@ def available_operations(records, custom_mappings=()):
     return ordered + sorted(choices, key=str.casefold)
 
 
-def remove_iqr_outliers(selected):
-    """Tukey 1.5*IQR fences, computed independently per selected configuration."""
+def remove_latency_outliers(selected):
+    """Median absolute deviation filter, independently per configuration.
+
+    The median/MAD rule remains sensitive to slow-tail anomalies when IQR
+    fences become too wide on skewed latency samples. If MAD is zero, use
+    the IQR fence as a fallback. Never mutate original measurements.
+    """
     if len(selected) < 4:
         return selected, 0
     values = [r["duration_ms"] for r in selected]
-    q1, q3 = percentile(values, .25), percentile(values, .75)
-    iqr = q3 - q1
-    low, high = q1 - 1.5 * iqr, q3 + 1.5 * iqr
+    center = statistics.median(values)
+    mad = statistics.median(abs(v - center) for v in values)
+    if mad > 0:
+        # Modified Z-score: 0.6745 * |x - median| / MAD > 3.5.
+        threshold = 3.5 * mad / 0.6745
+        low, high = center - threshold, center + threshold
+    else:
+        q1, q3 = percentile(values, .25), percentile(values, .75)
+        iqr = q3 - q1
+        if iqr == 0:
+            return selected, 0
+        low, high = q1 - 1.5 * iqr, q3 + 1.5 * iqr
     included = [r for r in selected if low <= r["duration_ms"] <= high]
     return included, len(selected) - len(included)
 
@@ -437,8 +451,9 @@ def compute_data(operation="all", window=50, ignore_outliers=True):
         matching = [r for r in filtered if r["startup"] == startup and r["persistence"] == persistence]
         selected = matching if window == 0 else matching[:window]
         selected_count += len(selected)
+        before_filter_count = len(selected)
         if ignore_outliers:
-            selected, excluded = remove_iqr_outliers(selected)
+            selected, excluded = remove_latency_outliers(selected)
             excluded_count += excluded
         included_records.extend(selected)
         values = [r["duration_ms"] for r in selected]
@@ -450,6 +465,7 @@ def compute_data(operation="all", window=50, ignore_outliers=True):
                 "startup": startup, "persistence": persistence,
                 "label": f"{startup.title()} / {'Direct cloud' if persistence == 'direct' else 'Offline-first'}",
                 "n": len(values), "total_n": len(matching),
+                "excluded_n": before_filter_count - len(values), "selected_n": before_filter_count,
                 "latest_ms": latest, "fastest_ms": min(values), "mean_ms": round(mean, 2),
                 "median_ms": round(statistics.median(values), 2),
                 "p95_ms": round(percentile(values, .95), 2),
@@ -461,7 +477,8 @@ def compute_data(operation="all", window=50, ignore_outliers=True):
         else:
             groups.append({"startup": startup, "persistence": persistence,
                            "label": f"{startup.title()} / {'Direct cloud' if persistence == 'direct' else 'Offline-first'}",
-                           "n": 0, "total_n": 0, "latest_ms": None, "fastest_ms": None, "mean_ms": None,
+                           "n": 0, "total_n": len(matching), "excluded_n": before_filter_count,
+                            "selected_n": before_filter_count, "latest_ms": None, "fastest_ms": None, "mean_ms": None,
                            "median_ms": None, "p95_ms": None, "stddev_ms": None,
                            "divergence_ms": None, "divergence_pct": None, "latest_utc": None})
     return {
@@ -470,7 +487,7 @@ def compute_data(operation="all", window=50, ignore_outliers=True):
         "operation_requests": len(filtered),
         "operations": available_operations(records, CONFIG.get("operations", [])),
         "selected_operation": operation, "window": window,
-        "ignore_outliers": ignore_outliers, "outlier_method": "Tukey 1.5 x IQR per configuration",
+        "ignore_outliers": ignore_outliers, "outlier_method": "Modified Z-score (MAD, 3.5); IQR fallback",
         "excluded_count": excluded_count, "selected_count": selected_count,
         "included_count": len(included_records),
         "groups": groups, "recent": sorted(included_records, key=lambda r: r["end_utc"], reverse=True)[:50],
