@@ -1,6 +1,6 @@
 $ErrorActionPreference = 'Stop'
-$original = '2ccca791c3a5dcd1b1c5010740ee18dc0067b12189a3792c640ebb0422ef57e9'
-$patched = '3fd2f1dfab0f7b75204bebdb4273d77b9f831d970424f35cc183177d87388470'
+$original = '3fd2f1dfab0f7b75204bebdb4273d77b9f831d970424f35cc183177d87388470'
+$patched = 'e737baac33ae8b065e7c9f76a088a197150c33f6c60a44a589bf419217ade2af'
 function Hash($path) { (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant() }
 $work = Join-Path $env:TEMP ('entryflow-verify-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $work | Out-Null
@@ -12,8 +12,8 @@ function Check-Origin($hash) {
 }
 function Update-Entrypoint {
     $index = Join-Path $root 'index.html'
-    $from = '"mainJsPath":"main.dart.js?entryflow=2ccca791"'
-    $to = '"mainJsPath":"main.dart.js?entryflow=3fd2f1df"'
+    $from = '"mainJsPath":"main.dart.js?entryflow=3fd2f1df"'
+    $to = '"mainJsPath":"main.dart.js?entryflow=e737baac"'
     $html = [IO.File]::ReadAllText($index)
     if ($html.Contains($to)) { return }
     if ([regex]::Matches($html,[regex]::Escape($from)).Count -ne 1) { throw 'Unexpected Flutter boot configuration.' }
