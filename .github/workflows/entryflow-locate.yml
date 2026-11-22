@@ -1,0 +1,64 @@
+name: Locate EntryFlow frontend (read-only)
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/entryflow-locate.yml'
+permissions:
+  contents: read
+jobs:
+  locate:
+    runs-on: [self-hosted, windows]
+    environment: production
+    timeout-minutes: 3
+    steps:
+      - name: Identify EntryFlow listener and matching frontend
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $expected = '35f6a7317aab9d74e3165955f9d92de4fb61b89e14bf116d5760582c79764d09'
+          $uri='http://127.0.0.1:61310/main.dart.js'
+          $response=Invoke-WebRequest -Uri $uri -Method Head -UseBasicParsing -TimeoutSec 8
+          $last=$response.Headers['Last-Modified']
+          Write-Host "Origin last modified: $last"
+          $roots=@()
+          foreach($connection in @(Get-NetTCPConnection -LocalPort 61310 -State Listen)) {
+            $proc=Get-CimInstance Win32_Process -Filter "ProcessId=$($connection.OwningProcess)"
+            for($depth=0; $proc -and $depth -lt 4; $depth++) {
+              Write-Host ("Launcher process: " + $proc.Name)
+              foreach($m in [regex]::Matches([string]$proc.CommandLine,'(?i)"([A-Z]:[^"]+)"|([A-Z]:[^\s"]+)')) {
+                $path=if($m.Groups[1].Success){$m.Groups[1].Value}else{$m.Groups[2].Value}
+                if(Test-Path -LiteralPath $path -PathType Leaf){
+                  $roots+=Split-Path -Parent $path
+                  if($path -match '\.(cmd|bat|ps1)$' -and (Get-Item -LiteralPath $path).Length -lt 65536) {
+                    foreach($p in [regex]::Matches((Get-Content -Raw -LiteralPath $path),'(?im)"([A-Z]:[^"]+)"|([A-Z]:[^\s"]+)')){
+                      $roots+=if($p.Groups[1].Success){$p.Groups[1].Value}else{$p.Groups[2].Value}
+                    }
+                  }
+                } else {$roots+=$path}
+              }
+              $proc=Get-CimInstance Win32_Process -Filter "ProcessId=$($proc.ParentProcessId)"
+            }
+          }
+          $roots+=@('C:\EntryFlow','C:\MSUO','C:\inetpub','C:\www','C:\Sites','C:\Apps','C:\Web','C:\Deploy')
+          foreach($drive in (Get-PSDrive -PSProvider FileSystem)) {
+            $roots+=@(Get-ChildItem -LiteralPath $drive.Root -Directory -ErrorAction SilentlyContinue | Where-Object Name -match 'entryflow|frontend|deploy|msuo|www' | ForEach-Object FullName)
+          }
+          foreach($profile in @(Get-ChildItem -LiteralPath 'C:\Users' -Directory -ErrorAction SilentlyContinue)){
+            foreach($folder in @('Desktop','Documents','Downloads','source\repos')){
+              $roots+=Join-Path $profile.FullName $folder
+            }
+          }
+          $seen=@{}
+          foreach($root in ($roots|Sort-Object -Unique)){
+            if($root -notmatch '^[A-Za-z]:\\[^\\]' -or $root -match '(?i)\\(?:Windows|Program Files(?: \(x86\))?|AppData|actions-runner|node_modules)(?:\\|$)'){continue}
+            if(!(Test-Path -LiteralPath $root -PathType Container)){continue}
+            foreach($f in @(Get-ChildItem -LiteralPath $root -Filter main.dart.js -File -Recurse -ErrorAction SilentlyContinue)){
+              if($seen.ContainsKey($f.FullName)){continue}; $seen[$f.FullName]=$true
+              if($f.DirectoryName -match 'backup|\.dart_tool|\\node_modules\\'){continue}
+              if($f.Length -ne 3029545){continue}
+              if((Get-FileHash -LiteralPath $f.FullName -Algorithm SHA256).Hash -eq $expected) {
+                Write-Host ("Matching bundle: "+$f.FullName+" | "+$f.LastWriteTimeUtc.ToString('R'))
+              }
+            }
+          }
