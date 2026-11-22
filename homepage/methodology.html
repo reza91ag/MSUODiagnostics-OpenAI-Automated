@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="The scenario-driven engineering process behind MSUO, documented through Git history and WatchDog execution records.">
+<title>MSUO™ Scenario-Driven Engineering Methodology</title>
+<style>
+:root{color-scheme:dark;--bg:#0c0f14;--panel:#111620;--ink:#f0f4fa;--muted:#abb7c8;--line:#293446;--blue:#a0bfff}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font:1rem/1.65 system-ui,sans-serif}
+a{color:var(--blue);text-underline-offset:.22em}a:hover{color:white}a:focus-visible{outline:2px solid #bad0ff;outline-offset:4px}
+.wrap{width:min(1080px,calc(100% - 3rem));margin-inline:auto}.skip{position:absolute;top:-5rem;left:1rem}.skip:focus{top:.4rem;background:var(--bg)}
+header,footer{border-block:1px solid var(--line)}.bar{min-height:70px;display:flex;align-items:center;justify-content:space-between;gap:.8rem}
+.brand{display:flex;align-items:center;gap:.7rem;color:var(--ink);text-decoration:none;font-weight:750}.brand img{width:27px;height:auto}
+main{padding-block:clamp(2.5rem,8vw,6rem)}h1,h2,h3{letter-spacing:-.045em;line-height:1.14}h1{margin:0;max-width:19ch;font-size:clamp(2.35rem,6vw,4.85rem)}h2{font-size:clamp(1.65rem,3.5vw,2.3rem);scroll-margin-top:1.2rem}h3{font-size:1.3rem;margin:1.85rem 0 .55rem}
+p,li,figcaption{color:var(--muted)}.intro{font-size:1.13rem;max-width:68ch}.layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(190px,245px);gap:clamp(1.25rem,5vw,4rem);align-items:start;margin-top:2.3rem}
+article{min-width:0;grid-column:1;grid-row:1}.contents{grid-column:2;grid-row:1;position:sticky;top:1.25rem;padding:1rem 1.15rem;border:1px solid var(--line);border-radius:10px;background:var(--panel)}.contents strong{display:block}.contents ul{padding-left:1.15rem;margin:.5rem 0}.contents li{margin:.35rem 0;font-size:.92rem}
+section{border-top:1px solid var(--line);margin-bottom:2rem}figure{margin:1.3rem 0;padding:.75rem;background:var(--panel);border:1px solid var(--line);border-radius:10px}figure a{display:block}figure img{display:block;width:100%;height:auto;border-radius:5px;background:white}figcaption{margin:.6rem .1rem .05rem;font-size:.92rem}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:.65rem .85rem}code{color:var(--blue);overflow-wrap:anywhere}hr{border:0;border-top:1px solid var(--line);margin:2rem 0}footer{padding:1rem 0;color:var(--muted);font-size:.9rem}
+@media(max-width:780px){.wrap{width:calc(100% - 2rem)}.layout{display:flex;flex-direction:column}.layout>*{width:100%}.contents{position:static}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body id="top">
+<a class="skip" href="#main">Skip to content</a>
+<header><div class="wrap bar"><a class="brand" href="/"><img src="data:image/png;base64,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" alt="">MSUO™</a><a href="/#methodology">Back to homepage</a></div></header>
+<main class="wrap" id="main">
+<h1>MSUO™ Scenario-Driven Engineering Methodology</h1>
+<div class="intro"><p>MSUO was developed through a repeatable, scenario-driven engineering process. For each selected execution objective, the implementation was iteratively stabilized and then exercised under a demonstration phase. The Git history and WatchDog execution records make those development stages inspectable.</p></div>
+<div class="layout">
+<nav class="contents" aria-label="On this page"><strong>On this page</strong><ul><li><a href="#1-the-engineering-cycle">1. The Engineering Cycle</a></li><li><a href="#2-recorded-scenario-progression">2. Recorded Scenario Progression</a></li><li><a href="#5-kernel-level-scenarios">5. Kernel-Level Scenarios</a></li><li><a href="#6-entryflow-lite-application-scenarios">6. EntryFlow Lite Application Scenarios</a></li><li><a href="#7-additional-git-recorded-phases">7. Additional Git-Recorded Phases</a></li><li><a href="#8-inspectable-engineering-evidence">8. Inspectable Engineering Evidence</a></li><li><a href="#9-engineering-conclusion">9. Engineering Conclusion</a></li></ul></nav>
+<article><section><h2 id="1-the-engineering-cycle">1. The Engineering Cycle</h2>
+<figure><a href="/methodology/figure-1.webp"><img src="/methodology/figure-1.webp" width="1766" height="1281" alt="Figure 1. The recurring Choose → Stabilization → Demonstration → Next Scenario loop." loading="lazy"></a><figcaption>Figure 1. The recurring Choose → Stabilization → Demonstration → Next Scenario loop.</figcaption></figure>
+<p>Choose Scenario — Define a concrete execution objective. Stabilization — Implement, execute, correct and refine the relevant kernel or application logic. Demonstration — Exercise the scenario, preserve execution records, and continue to the next objective.</p>
+<p>Commit naming convention:</p>
+<pre><code>[ReAg]:MSUO-Stabilization - Scenario: &lt;Scenario Name&gt; - &lt;Iteration&gt;</code></pre>
+<pre><code>[ReAg]:MSUO-Demonstration - Scenario: &lt;Scenario Name&gt; - &lt;Iteration&gt;</code></pre>
+<p>The lines above illustrate the naming pattern; recorded examples below preserve the historical spelling and numbering.</p>
+</section><section><h2 id="2-recorded-scenario-progression">2. Recorded Scenario Progression</h2>
+<figure><a href="/methodology/figure-2.webp"><img src="/methodology/figure-2.webp" width="1420" height="2151" alt="Figure 2. WatchDog scenario groups and two additional Git-recorded phases." loading="lazy"></a><figcaption>Figure 2. WatchDog scenario groups and two additional Git-recorded phases.</figcaption></figure>
+<p>The diagram is a scenario inventory in development order, not a claim that the last two Git-only phases occurred after every WatchDog event; their dates are explicitly shown.</p>
+</section><section><h2 id="5-kernel-level-scenarios">5. Kernel-Level Scenarios</h2>
+<h3>01 — Write to Database</h3>
+<p>June 10–12, 2026 | Stabilization: 82 | Demonstration: 3</p>
+<p>Stabilization Git reference:</p>
+<pre><code>[ReAg]:MSUO-Stabilization - Scenario: Write to Database - 001</code></pre>
+<p>Demonstration Git / WatchDog reference:</p>
+<pre><code>[ReAg]:MSUO-Demonstraion - Scenario: Write to Database 001</code></pre>
+<h3>02 — Thread Continuation for Data Dependency Resolution</h3>
+<p>June 13–14, 2026 | Stabilization: 90 | Demonstration: 1</p>
+<p>Stabilization Git reference:</p>
+<pre><code>[ReAg]:MSUO-Stabilization - Scenario: Thread Continuation for Data Dependency Resolution - 000</code></pre>
+<p>Demonstration Git / WatchDog reference:</p>
+<pre><code>[ReAg]:MSUO-Demonstration - Scenario: Thread Continuation for Data Dependency Resolution - 000</code></pre>
+<h3>03 — Read from Database</h3>
+<p>June 14, 2026 | Stabilization: 26 | Demonstration: 19</p>
+<p>Stabilization Git reference:</p>
+<pre><code>[ReAg]:MSUO-Stabilization - Scenario: Read From DB 000</code></pre>
+<p>Demonstration Git / WatchDog reference:</p>
+<pre><code>[ReAg]:MSUO-Demonstration - Scenario: ReadFromDB - LatestLogs 001</code></pre>
+<h3>04 — Multi-Endpoint Integration</h3>
+<p>June 22–July 27, 2026 | Stabilization: 441 | Demonstration: 1</p>
+<p>Stabilization Git reference:</p>
+<pre><code>[ReAg]:MSUO-Stabilization - Scenario: Multi-Endpoint Integration-021</code></pre>
+<p>Demonstration Git / WatchDog reference:</p>
+<p>WatchDog: Multi-Endpoint - Demonstration; associated Git reference retains a stabilization label.</p>
+</section><section><h2 id="6-entryflow-lite-application-scenarios">6. EntryFlow Lite Application Scenarios</h2>
+<h3>05 — Initial EntryFlow Lite Stabilization</h3>
+<p>July 28, 2026 | Stabilization: 9 | Demonstration: —</p>
+<p>Stabilization Git / WatchDog reference:</p>
+<pre><code>[ReAg]:MSUO-Stabilization - Scenario: EntryFlow Lite - 001</code></pre>
+<p>Demonstration Git / WatchDog reference:</p>
+<p>Not separately labeled in the snapshot set.</p>
+<h3>06 — Sign-Up / Sign-In</h3>
+<p>August 1–9, 2026 | Stabilization: 125 | Demonstration: 11</p>
+<p>Stabilization Git / WatchDog reference:</p>
+<pre><code>[ReAg]:MSUO-Stabilization - Scenario: EntryFlow Lite - 001</code></pre>
+<p>Demonstration Git / WatchDog reference:</p>
+<pre><code>[ReAg]:MSUO-Demonstration - Scenario: EntryFlow Lite - SignUp/SignIn - 002</code></pre>
+<p>WatchDog records Sign-Up (69) and Sign-In (56) stabilization separately; the demonstrated phase is combined.</p>
+<h3>07 — ResetPassword</h3>
+<p>August 9–11, 2026 | Stabilization: 66 | Demonstration: 2</p>
+<p>Stabilization Git / WatchDog reference:</p>
+<pre><code>[ReAg]:MSUO-Demonstration - Scenario: EntryFlow Lite - SignUp/SignIn - 006</code></pre>
+<p>Demonstration Git / WatchDog reference:</p>
+<pre><code>[ReAg]:MSUO-Demonstration - Scenario: EntryFlow Lite - ResetPassword - 001</code></pre>
+<p>The stabilization snapshots have WatchDog Scenario: Entryflow-Lite - Stabilization - ResetPassword; some associated commits retained legacy SignUp/SignIn labels.</p>
+<h3>08 — CRUD / DUP-Native Operations</h3>
+<p>August 14–19, 2026 | Stabilization: 584 | Demonstration: 8</p>
+<p>Stabilization Git / WatchDog reference:</p>
+<pre><code>[ReAg]:MSUO-Stabilization - Scenario: EntryFlow Lite - Crud - 001</code></pre>
+<p>Demonstration Git / WatchDog reference:</p>
+<pre><code>[ReAg]:MSUO-Demonstration - Scenario: EntryFlow Lite - Crud - 001</code></pre>
+<p>Includes DUP-native CRUD and tree search, database read/persistence, and authorization-key validation extensions.</p>
+<h3>09 — PDF Generation</h3>
+<p>August 19–20, 2026 | Stabilization: 7 | Demonstration: 23</p>
+<p>Stabilization Git / WatchDog reference:</p>
+<pre><code>[ReAg]:MSUO-Stablilization - Scenario: EntryFlow Lite - PDF Generation - 001</code></pre>
+<p>Demonstration Git / WatchDog reference:</p>
+<pre><code>[ReAg]:MSUO-Demonstration - Scenario: EntryFlow Lite - PDF Generation - 001</code></pre>
+<h3>10 — PDF Generation / Warm-Startup Optimization</h3>
+<p>August 21, 2026 | Stabilization: — | Demonstration: 5</p>
+<p>Stabilization Git / WatchDog reference:</p>
+<p>No separately labeled stabilization record established.</p>
+<p>Demonstration Git / WatchDog reference:</p>
+<p>WatchDog: Entryflow-Lite - Demonstration - PDF Generation/ Speed Optimization via Warm-Startup</p>
+<p>WatchDog captures show GitAutomation_Failed/ instead of a usable scenario-specific commit reference.</p>
+</section><section><h2 id="7-additional-git-recorded-phases">7. Additional Git-Recorded Phases</h2>
+<h3>11 — Offline-First Persistence Speed Optimization</h3>
+<p>August 20, 2026 | Stabilization: Git 001–005 | Demonstration: —</p>
+<p>Stabilization:</p>
+<pre><code>[ReAg]:MSUO-Stablilization - Scenario: EntryFlow Lite - Speed Optimization via Offline-First Persistence - 001</code></pre>
+<p>Demonstration:</p>
+<p>No separate exact-label WatchDog demonstration identified.</p>
+<h3>12 — EntryFlow Lite Release 1.0.0</h3>
+<p>August 20–September 7, 2026 | Stabilization: — | Demonstration: Git 001–002</p>
+<p>Stabilization:</p>
+<p>No separate stabilization label for release.</p>
+<p>Demonstration:</p>
+<pre><code>[ReAg]:MSUO-Demonstration - Scenario: EntryFlow Lite - Release 1.0.0 - 001</code></pre>
+</section><section><h2 id="8-inspectable-engineering-evidence">8. Inspectable Engineering Evidence</h2>
+<figure><a href="/methodology/figure-3.webp"><img src="/methodology/figure-3.webp" width="1560" height="1146" alt="Figure 3. Git commit, implementation state and WatchDog execution evidence." loading="lazy"></a><figcaption>Figure 3. Git commit, implementation state and WatchDog execution evidence.</figcaption></figure>
+<p>Git commit messages document scenario-designated changes; a commit hash anchors a particular code state. WatchDog logs record the scenario used to exercise that state, execution timestamps, runtime traces, and observed behavior. Logged mutation measurements provide additional information about the code changed between observed builds.</p>
+<p>For ResetPassword stabilization, the repository author’s comments explicitly distinguish legacy Git commit labels from the authoritative WatchDog Scenario field. Therefore, historical scenario classification follows the WatchDog label, while commit messages preserve the source-state reference.</p>
+<h3>13 — OptiSpec IoT Dashboard — Full MSUO Logic Swap</h3>
+<p><b>Git commit date:</b> November 20, 2026, 10:25:24 CET</p>
+<p><b>Development phase:</b> Cross-Application Integration / Full MSUO Logic Swap</p>
+<p><b>Original Git commit message:</b></p>
+<p><code>[ReAg] OptiSpec App Development-Full MSUO- Logic Swap - First Commit</code></p>
+<p><b>Commit SHA:</b></p>
+<p><code>3a5dae9d375e56c0de2348ad9a195c551f6d2147</code></p>
+<p><b>Engineering Significance</b></p>
+<p>This commit records the adaptation of the MSUO-based EntryFlow implementation into the OptiSpec IoT Dashboard, including application-specific logic changes while retaining the underlying MSUO architectural structure.</p>
+<p>The source changes include the introduction of OptiSpec application logic and the transition from <code>EntryFlow-API</code> to <code>OptiSpec-API</code>.</p>
+<p>This represents an important cross-application engineering milestone: the MSUO architecture is applied to a second, functionally distinct application domain.</p>
+<p><b>Evidence:</b> Git commit history and source-code differences, November 20, 2026.</p>
+<hr>
+<h3>Development Record</h3>
+<ul>
+<li><b>13 recorded scenario tracks and development phases</b></li>
+<li><b>10 WatchDog scenario groups</b></li>
+<li><b>3 additional Git-recorded phases</b></li>
+<li><b>466 Git commit records</b></li>
+<li><b>Development history: April 4 – November 20, 2026</b></li>
+</ul>
+<p>OptiSpec extends the documented engineering history beyond the EntryFlow demonstration and establishes a recorded cross-application integration milestone.</p>
+</section><section><h2 id="9-engineering-conclusion">9. Engineering Conclusion</h2>
+<p>The preserved records demonstrate a deliberate progression of scenario selection, iterative stabilization, and scenario-specific demonstration across kernel and application functionality. The combination of Git evolution and WatchDog observations makes the engineering process independently inspectable rather than merely retrospective.</p>
+<p><b>MSUO — Scenario-driven development, empirically recorded.</b></p>
+<p>Sources: MSUO, Git History; Watchdog-Log-Till27-07; Watchdog-Log-EntryFlow-Full; overlapping WatchDog extracts. Reviewed November 2026.</p></section></article>
+</div>
+</main>
+<footer><div class="wrap bar"><span>© 2026 Sky Digital Dreams, All rights reserved.</span><a href="#top">Back to top</a></div></footer>
+</body>
+</html>

@@ -1,4 +1,4 @@
-"""Serve the MSUO homepage on a dedicated localhost port."""
+"""Serve the public MSUO website on a dedicated localhost port."""
 from argparse import ArgumentParser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -9,27 +9,39 @@ def main():
     parser = ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=8766)
     args = parser.parse_args()
-    homepage = Path(__file__).with_name("index.html").read_bytes()
+    directory = Path(__file__).parent
+    html = "text/html; charset=utf-8"
+    methodology = (html, (directory / "methodology.html").read_bytes())
+    routes = {
+        "/": (html, (directory / "index.html").read_bytes()),
+        "/methodology": methodology,
+        "/methodology/": methodology,
+    }
+    for number in range(1, 4):
+        name = f"figure-{number}.webp"
+        routes[f"/methodology/{name}"] = ("image/webp", (directory / name).read_bytes())
 
     class HomepageHandler(BaseHTTPRequestHandler):
         def do_GET(self):
-            self.serve_homepage(send_body=True)
+            self.serve_page(send_body=True)
 
         def do_HEAD(self):
-            self.serve_homepage(send_body=False)
+            self.serve_page(send_body=False)
 
-        def serve_homepage(self, *, send_body):
-            if urlsplit(self.path).path != "/":
+        def serve_page(self, *, send_body):
+            page = routes.get(urlsplit(self.path).path)
+            if page is None:
                 self.send_error(404)
                 return
+            content_type, content = page
             self.send_response(200)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.send_header("Content-Length", str(len(homepage)))
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(content)))
             self.send_header("Cache-Control", "no-cache")
             self.send_header("X-Content-Type-Options", "nosniff")
             self.end_headers()
             if send_body:
-                self.wfile.write(homepage)
+                self.wfile.write(content)
 
     with ThreadingHTTPServer(("127.0.0.1", args.port), HomepageHandler) as server:
         server.serve_forever()

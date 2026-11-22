@@ -10,7 +10,7 @@ $python = (& py -3 -c "import sys; print(sys.executable)").Trim()
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $python)) {
     throw 'Python 3 is required on the Windows runner.'
 }
-$files = @('serve.py', 'index.html')
+$files = @('serve.py', 'index.html', 'methodology.html', 'figure-1.webp', 'figure-2.webp', 'figure-3.webp')
 foreach ($file in $files) {
     if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot $file) -PathType Leaf)) {
         throw "Missing homepage source: $file"
@@ -44,11 +44,16 @@ try {
         Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
         Start-ScheduledTask -TaskName $taskName
         $expected = (Get-FileHash -LiteralPath (Join-Path $PSScriptRoot 'index.html') -Algorithm SHA256).Hash
+        $methodologyExpected = (Get-FileHash -LiteralPath (Join-Path $PSScriptRoot 'methodology.html') -Algorithm SHA256).Hash
         $download = Join-Path $backup 'health.html'
+        $methodologyDownload = Join-Path $backup 'methodology-health.html'
         for ($attempt = 0; $attempt -lt 20; $attempt++) {
             try {
                 Invoke-WebRequest -Uri "http://127.0.0.1:$Port/" -UseBasicParsing -TimeoutSec 3 -OutFile $download
-                if ((Get-FileHash -LiteralPath $download -Algorithm SHA256).Hash -eq $expected) {
+                Invoke-WebRequest -Uri "http://127.0.0.1:$Port/methodology/" -UseBasicParsing -TimeoutSec 3 -OutFile $methodologyDownload
+                $homepageOK = (Get-FileHash -LiteralPath $download -Algorithm SHA256).Hash -eq $expected
+                $methodologyOK = (Get-FileHash -LiteralPath $methodologyDownload -Algorithm SHA256).Hash -eq $methodologyExpected
+                if ($homepageOK -and $methodologyOK) {
                     Write-Host "Homepage verified at http://127.0.0.1:$Port/ (SHA256 $expected)"
                     return
                 }
@@ -57,7 +62,7 @@ try {
             }
             Start-Sleep -Seconds 1
         }
-        throw 'The homepage health check did not return the approved HTML.'
+        throw 'The homepage or methodology health check did not return the deployed HTML.'
     } catch {
         $deploymentError = $_
         Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
