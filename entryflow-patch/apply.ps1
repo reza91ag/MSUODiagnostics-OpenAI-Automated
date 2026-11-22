@@ -10,6 +10,32 @@ function Check-Origin($hash) {
     Invoke-WebRequest -Uri $uri -Headers @{Host='entryflow.msuo-runtime.io'; 'Cache-Control'='no-cache'} -UseBasicParsing -TimeoutSec 12 -OutFile $response
     if ((Hash $response) -ne $hash) { throw 'EntryFlow origin did not return the expected build.' }
 }
+function Update-Entrypoint {
+    $index = Join-Path $root 'index.html'
+    $from = '"mainJsPath":"main.dart.js"'
+    $to = '"mainJsPath":"main.dart.js?entryflow=676d1081"'
+    $html = [IO.File]::ReadAllText($index)
+    if ($html.Contains($to)) { return }
+    if ([regex]::Matches($html,[regex]::Escape($from)).Count -ne 1) { throw 'Unexpected Flutter boot configuration.' }
+    $parent = Split-Path -Parent $root
+    $stagedHtml = Join-Path $parent ('.entryflow-' + [guid]::NewGuid().ToString('N') + '.tmp')
+    $backupHtml = $stagedHtml + '.original-index.html'
+    try {
+        [IO.File]::WriteAllText($stagedHtml,$html.Replace($from,$to))
+        [IO.File]::Replace($stagedHtml,$index,$backupHtml)
+        try {
+            $served = Invoke-WebRequest -Uri ('http://127.0.0.1:61310/?verify=' + [guid]::NewGuid().ToString('N')) -Headers @{Host='entryflow.msuo-runtime.io'} -UseBasicParsing -TimeoutSec 12
+            if (!$served.Content.Contains($to)) { throw 'Flutter boot configuration did not reach the origin.' }
+            Check-Origin $patched
+        } catch {
+            [IO.File]::Replace($backupHtml,$index,$stagedHtml)
+            throw
+        }
+    } finally {
+        Remove-Item -LiteralPath $stagedHtml -ErrorAction SilentlyContinue
+    }
+    Write-Host 'Versioned Flutter boot entry verified.'
+}
 try {
     $dirs = @($env:ProgramFiles, $env:ProgramW6432, [Environment]::GetEnvironmentVariable('ProgramFiles(x86)')) | Where-Object { $_ } | Sort-Object -Unique
     $launchers = @($dirs | ForEach-Object { Join-Path (Join-Path $_ 'EntryFlow') 'start.bat' } | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf })
@@ -28,7 +54,7 @@ try {
     if ($candidates.Count -ne 1) { throw "Found $($candidates.Count) matching frontend bundles beside the EntryFlow launcher; expected one." }
     $file = $candidates[0]
     $root = Split-Path -Parent $file
-    if ((Hash $file) -eq $patched) { Check-Origin $patched; return }
+    if ((Hash $file) -eq $patched) { Check-Origin $patched; Update-Entrypoint; return }
     if ((Hash $file) -ne $original) { throw 'The on-disk build differs from the original used to prepare this patch.' }
     Check-Origin $original
     Expand-Archive -LiteralPath (Join-Path $PSScriptRoot 'patch.zip') -DestinationPath $work
