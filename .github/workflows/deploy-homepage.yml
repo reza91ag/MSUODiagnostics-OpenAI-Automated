@@ -1,0 +1,28 @@
+name: Deploy MSUO Homepage (Windows)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'homepage/**'
+      - '.github/workflows/deploy-homepage.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: msuo-homepage-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy and verify the homepage origin
+    runs-on: [self-hosted, windows]
+    timeout-minutes: 5
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install and verify the homepage task
+        shell: powershell
+        run: .\homepage\deploy.ps1
