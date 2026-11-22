@@ -1,0 +1,22 @@
+name: Apply verified EntryFlow frontend patch
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/entryflow-frontend-patch.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: entryflow-frontend
+  cancel-in-progress: false
+jobs:
+  apply:
+    runs-on: [self-hosted, windows]
+    environment: production
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Back up and patch verified EntryFlow origin
+        shell: powershell
+        run: .\entryflow-patch\apply.ps1
