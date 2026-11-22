@@ -1,0 +1,23 @@
+name: Apply OptiSpec username color patch
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/optispec-frontend-patch.yml'
+      - 'optispec-patch/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: optispec-frontend
+  cancel-in-progress: false
+jobs:
+  apply:
+    runs-on: [self-hosted, windows]
+    environment: production
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Back up and patch verified OptiSpec origin
+        shell: powershell
+        run: .\optispec-patch\apply.ps1
