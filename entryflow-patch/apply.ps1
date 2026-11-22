@@ -24,6 +24,17 @@ try {
                 if (Test-Path -LiteralPath $part -PathType Container) { $paths += Join-Path $part 'main.dart.js' }
             }
         }
+        foreach ($task in Get-ScheduledTask) {
+            foreach ($action in $task.Actions) {
+                if ($action.WorkingDirectory -and ($action.Arguments -match '\b61310\b' -or $task.TaskName -match 'EntryFlow.*(Front|Web)')) {
+                    $dir = [Environment]::ExpandEnvironmentVariables($action.WorkingDirectory)
+                    $paths += Join-Path $dir 'main.dart.js'
+                }
+            }
+        }
+        if (Test-Path -LiteralPath 'C:\EntryFlow' -PathType Container) {
+            $paths += @(Get-ChildItem -LiteralPath 'C:\EntryFlow' -Filter 'main.dart.js' -File -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.DirectoryName -notmatch '(?i)backup|\.dart_tool' -and (Test-Path -LiteralPath (Join-Path $_.DirectoryName 'index.html') -PathType Leaf) } | ForEach-Object { $_.FullName })
+        }
         $paths = @($paths | Sort-Object -Unique | Where-Object { (Test-Path -LiteralPath $_ -PathType Leaf) -and (Hash $_) -eq $original })
         if ($paths.Count -ne 1) { throw 'EntryFlow is listening, but its process arguments do not identify a unique matching frontend folder.' }
         $file = $paths[0]
