@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/entryflow-frontend-patch.yml'
+      - 'entryflow-patch/apply.ps1'
   workflow_dispatch:
 permissions:
   contents: read

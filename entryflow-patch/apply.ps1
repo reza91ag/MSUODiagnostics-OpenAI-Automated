@@ -13,7 +13,21 @@ function Check-Origin($hash) {
     if ((Hash $response) -ne $hash) { throw 'EntryFlow origin did not return the expected build.' }
 }
 try {
-    if (!(Test-Path -LiteralPath $file -PathType Leaf)) { throw 'The EntryFlow frontend path is absent on this runner.' }
+    if (!(Test-Path -LiteralPath $file -PathType Leaf)) {
+        $appcmd = Join-Path $env:SystemRoot 'System32\inetsrv\appcmd.exe'
+        $listener = @(Get-NetTCPConnection -LocalPort 61310 -State Listen -ErrorAction SilentlyContinue)
+        if ($listener.Count -eq 0) { throw 'EntryFlow port 61310 is not listening on this runner.' }
+        if (!(Test-Path -LiteralPath $appcmd)) { throw 'EntryFlow port is listening but this runner has no IIS site configuration to resolve the frontend folder.' }
+        [xml]$sites = (& $appcmd list site /xml | Out-String)
+        if ($LASTEXITCODE -ne 0) { throw 'Could not read IIS site bindings.' }
+        $matches = @($sites.appcmd.SITE | Where-Object { $_.bindings -match ':61310:(?:entryflow\.msuo-runtime\.io)?(?:,|$)' })
+        if ($matches.Count -ne 1) { throw 'Could not find a unique IIS site bound to the EntryFlow port.' }
+        $physical = (& $appcmd list vdir ($matches[0].'SITE.NAME' + '/') /text:physicalPath | Out-String).Trim()
+        if ($LASTEXITCODE -ne 0 -or !$physical) { throw 'Could not resolve the EntryFlow IIS root.' }
+        $root = [Environment]::ExpandEnvironmentVariables($physical)
+        $file = Join-Path $root 'main.dart.js'
+        if (!(Test-Path -LiteralPath $file -PathType Leaf)) { throw 'The IIS root does not contain an EntryFlow bundle.' }
+    }
     if ((Hash $file) -eq $patched) { Check-Origin $patched; return }
     if ((Hash $file) -ne $original) { throw 'The on-disk build differs from the original used to prepare this patch.' }
     Check-Origin $original
@@ -21,7 +35,7 @@ try {
     $bundle = Join-Path $work 'main.dart.js'
     if ((Hash $bundle) -ne $patched) { throw 'Patch checksum mismatch.' }
 
-    $backup = 'C:\EntryFlow\Frontend-backup-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [guid]::NewGuid().ToString('N').Substring(0,8)
+    $backup = (Join-Path (Split-Path -Parent $root) 'EntryFlow-Frontend-backup-') + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [guid]::NewGuid().ToString('N').Substring(0,8)
     Copy-Item -LiteralPath $root -Destination $backup -Recurse
     $saved = Join-Path $backup 'main.dart.js'
     if ((Hash $saved) -ne $original) { throw 'Backup checksum mismatch.' }
