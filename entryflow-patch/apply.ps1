@@ -1,6 +1,4 @@
 $ErrorActionPreference = 'Stop'
-$root = 'C:\EntryFlow\Frontend'
-$file = Join-Path $root 'main.dart.js'
 $original = '35f6a7317aab9d74e3165955f9d92de4fb61b89e14bf116d5760582c79764d09'
 $patched = '676d1081f563e8bc5c0b83c2e07e03a5d51cdce536cb53d0430c0a89af52bdd3'
 function Hash($path) { (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant() }
@@ -13,33 +11,23 @@ function Check-Origin($hash) {
     if ((Hash $response) -ne $hash) { throw 'EntryFlow origin did not return the expected build.' }
 }
 try {
-    if (!(Test-Path -LiteralPath $file -PathType Leaf)) {
-        Check-Origin $original
-        $listener = @(Get-NetTCPConnection -LocalPort 61310 -State Listen -ErrorAction SilentlyContinue)
-        $paths = @()
-        foreach ($connection in $listener) {
-            $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$($connection.OwningProcess)"
-            foreach ($match in [regex]::Matches($proc.CommandLine, '(?i)"([A-Z]:[^"]+)"|([A-Z]:[^\s"]+)')) {
-                $part = if ($match.Groups[1].Success) { $match.Groups[1].Value } else { $match.Groups[2].Value }
-                if (Test-Path -LiteralPath $part -PathType Container) { $paths += Join-Path $part 'main.dart.js' }
+    $dirs = @($env:ProgramFiles, $env:ProgramW6432, [Environment]::GetEnvironmentVariable('ProgramFiles(x86)')) | Where-Object { $_ } | Sort-Object -Unique
+    $launchers = @($dirs | ForEach-Object { Join-Path (Join-Path $_ 'EntryFlow') 'start.bat' } | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf })
+    if (!$launchers.Count) { throw 'Could not find Program Files\\EntryFlow\\start.bat in either Program Files folder.' }
+    $candidates = @(
+        foreach ($launcher in $launchers) {
+            $install = Split-Path -Parent $launcher
+            foreach ($candidate in Get-ChildItem -LiteralPath $install -Filter 'main.dart.js' -File -Recurse -ErrorAction Stop) {
+                if ($candidate.DirectoryName -match '(?i)backup|\\.dart_tool|node_modules') { continue }
+                if (!(Test-Path -LiteralPath (Join-Path $candidate.DirectoryName 'index.html') -PathType Leaf)) { continue }
+                if ($candidate.Length -gt 2000000 -and (Hash $candidate.FullName) -in @($original,$patched)) { $candidate.FullName }
             }
         }
-        foreach ($task in Get-ScheduledTask) {
-            foreach ($action in $task.Actions) {
-                if ($action.WorkingDirectory -and ($action.Arguments -match '\b61310\b' -or $task.TaskName -match 'EntryFlow.*(Front|Web)')) {
-                    $dir = [Environment]::ExpandEnvironmentVariables($action.WorkingDirectory)
-                    $paths += Join-Path $dir 'main.dart.js'
-                }
-            }
-        }
-        if (Test-Path -LiteralPath 'C:\EntryFlow' -PathType Container) {
-            $paths += @(Get-ChildItem -LiteralPath 'C:\EntryFlow' -Filter 'main.dart.js' -File -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.DirectoryName -notmatch '(?i)backup|\.dart_tool' -and (Test-Path -LiteralPath (Join-Path $_.DirectoryName 'index.html') -PathType Leaf) } | ForEach-Object { $_.FullName })
-        }
-        $paths = @($paths | Sort-Object -Unique | Where-Object { (Test-Path -LiteralPath $_ -PathType Leaf) -and (Hash $_) -eq $original })
-        if ($paths.Count -ne 1) { throw 'EntryFlow is listening, but its process arguments do not identify a unique matching frontend folder.' }
-        $file = $paths[0]
-        $root = Split-Path -Parent $file
-    }
+    ) | Sort-Object -Unique
+    $candidates = @($candidates | Where-Object { $_ })
+    if ($candidates.Count -ne 1) { throw "Found $($candidates.Count) matching frontend bundles beside the EntryFlow launcher; expected one." }
+    $file = $candidates[0]
+    $root = Split-Path -Parent $file
     if ((Hash $file) -eq $patched) { Check-Origin $patched; return }
     if ((Hash $file) -ne $original) { throw 'The on-disk build differs from the original used to prepare this patch.' }
     Check-Origin $original
