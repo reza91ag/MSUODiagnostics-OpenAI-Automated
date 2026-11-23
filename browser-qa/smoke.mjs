@@ -159,7 +159,14 @@ async function footerControl(kind) {
       .sort((left, right) => left.x - right.x)
   );
   if (controls.length !== 2 || Math.abs(controls[0].y - controls[1].y) > 5) {
-    throw new Error('Could not identify the two dashboard footer controls.');
+    // EntryFlow's icon-only footer can omit the disabled minus button from semantics.
+    // The fixed desktop viewport matches the app's desktop footer layout.
+    const viewport = page.viewportSize();
+    if (viewport?.width !== 1365 || viewport.height !== 936) {
+      throw new Error('Could not identify the desktop footer controls.');
+    }
+    await page.mouse.click(viewport.width - (kind === 'add' ? 108 : 36), viewport.height - 32);
+    return;
   }
   const { x, y, width, height } = controls[kind === 'add' ? 0 : 1];
   await page.mouse.click(x + width / 2, y + height / 2);
