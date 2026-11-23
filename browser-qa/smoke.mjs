@@ -184,8 +184,13 @@ async function addRecord() {
   if (await row().count() !== 1) throw new Error('Synthetic record is ambiguous.');
 }
 
-async function selectCalendarDay(day, column, divider, heading) {
-  const dateCell = button(String(day)).or(ui(String(day)));
+async function selectCalendarDay(date, column, divider, heading) {
+  const day = String(date.getDate());
+  const label = new Intl.DateTimeFormat('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+  }).format(date);
+  const dateCell = ui(label).or(button(label)).or(ui(day)).or(button(day));
+  await dateCell.first().waitFor();
   const below = heading.y + heading.height;
   const bounds = [];
   for (const cell of await dateCell.all()) {
@@ -219,11 +224,10 @@ async function generatePdf() {
     const now = new Date();
     return { year: now.getFullYear(), month: now.getMonth() + 1, day: now.getDate() };
   });
-  await ui(String(today.day)).first().waitFor();
   stage = 'select From date';
-  await selectCalendarDay(1, 'From', till.x - 4, from);
+  await selectCalendarDay(new Date(today.year, today.month - 1, 1, 12), 'From', till.x - 4, from);
   stage = 'select Till date';
-  await selectCalendarDay(today.day, 'Till', till.x - 4, till);
+  await selectCalendarDay(new Date(today.year, today.month - 1, today.day, 12), 'Till', till.x - 4, till);
   console.log('PASS: clicked the From and Till calendar dates');
   stage = 'submit PDF request';
   const candidates = button(app.pdf);
