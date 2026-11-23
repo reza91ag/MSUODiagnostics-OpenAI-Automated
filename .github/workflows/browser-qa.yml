@@ -40,25 +40,14 @@ jobs:
       - name: Vary scheduled start time
         if: github.event_name == 'schedule'
         run: sleep "$((RANDOM % 481))"
-      - name: Run EntryFlow smoke test
-        if: matrix.app == 'entryflow'
+      - name: Run browser smoke test
         env:
+          QA_APP: ${{ matrix.app }}
           MSUO_QA_EMAIL: ${{ secrets.ENTRYFLOW_QA_EMAIL }}
           MSUO_QA_PASSWORD: ${{ secrets.ENTRYFLOW_QA_PASSWORD }}
         run: |
           if [[ -z "$MSUO_QA_EMAIL" || -z "$MSUO_QA_PASSWORD" ]]; then
-            echo "::error::Configure ENTRYFLOW_QA_EMAIL and ENTRYFLOW_QA_PASSWORD as separate repository secrets."
+            echo "::error::GitHub Actions did not supply ENTRYFLOW_QA_EMAIL or ENTRYFLOW_QA_PASSWORD."
             exit 1
           fi
-          node smoke.mjs entryflow
-      - name: Run OptiSpec smoke test
-        if: matrix.app == 'optispec'
-        env:
-          MSUO_QA_EMAIL: ${{ secrets.OPTISPEC_QA_EMAIL }}
-          MSUO_QA_PASSWORD: ${{ secrets.OPTISPEC_QA_PASSWORD }}
-        run: |
-          if [[ -z "$MSUO_QA_EMAIL" || -z "$MSUO_QA_PASSWORD" ]]; then
-            echo "::error::Configure OPTISPEC_QA_EMAIL and OPTISPEC_QA_PASSWORD as separate repository secrets."
-            exit 1
-          fi
-          node smoke.mjs optispec
+          node smoke.mjs "$QA_APP"
