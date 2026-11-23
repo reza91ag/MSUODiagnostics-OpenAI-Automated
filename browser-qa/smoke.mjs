@@ -29,6 +29,11 @@ const exact = { exact: true };
 const ui = text => page.getByLabel(text, exact).or(page.getByText(text, exact)).filter({ visible: true });
 const button = name => page.getByRole('button', { name, exact: true }).filter({ visible: true });
 const row = () => ui(runId);
+const signOutControl = () => {
+  const name = /^sign\s*out$/i;
+  return page.getByRole('button', { name })
+    .or(page.getByRole('link', { name })).or(ui(name)).filter({ visible: true });
+};
 
 async function enableSemantics() {
   const enable = page.locator('flt-semantics-placeholder[aria-label="Enable accessibility"]');
@@ -97,7 +102,10 @@ async function signIn() {
   try {
     await clickControl(button('Sign In'));
     stage = signInStage + ' / wait for dashboard';
-    await ui('Sign Out').waitFor();
+    await page.waitForURL(url => url.hostname === app.host && /^\/dashboard\/?$/.test(url.pathname));
+    await enableSemantics();
+    const ready = appName === 'optispec' ? signOutControl().or(button('PDF')) : signOutControl();
+    await ready.first().waitFor();
     stage = signInStage;
   } catch (error) {
     const atSignIn = new URL(page.url()).pathname === '/authorization';
@@ -122,7 +130,7 @@ async function signIn() {
 }
 
 async function signOut() {
-  await clickControl(ui('Sign Out'));
+  await clickControl(signOutControl().first());
   await page.waitForURL(url => url.hostname === app.host && url.pathname === '/authorization', { timeout });
   await enableSemantics();
   await authField('Email').waitFor();
@@ -275,7 +283,7 @@ try {
       // Reset any open dialog and selection while staying inside the same test account.
       await page.reload({ waitUntil: 'domcontentloaded' });
       await enableSemantics();
-      await ui('Sign Out').waitFor();
+      await signOutControl().first().waitFor();
       if (await removeRecord()) possibleRecord = false;
     } catch {
       // Leave any ambiguous state for inspection without attempting another deletion.
