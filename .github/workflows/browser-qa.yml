@@ -46,8 +46,11 @@ jobs:
           MSUO_QA_EMAIL: ${{ secrets.ENTRYFLOW_QA_EMAIL }}
           MSUO_QA_PASSWORD: ${{ secrets.ENTRYFLOW_QA_PASSWORD }}
         run: |
-          if [[ -z "$MSUO_QA_EMAIL" || -z "$MSUO_QA_PASSWORD" ]]; then
-            echo "::error::GitHub Actions did not supply ENTRYFLOW_QA_EMAIL or ENTRYFLOW_QA_PASSWORD."
+          missing=()
+          [[ -n "$MSUO_QA_EMAIL" ]] || missing+=("ENTRYFLOW_QA_EMAIL")
+          [[ -n "$MSUO_QA_PASSWORD" ]] || missing+=("ENTRYFLOW_QA_PASSWORD")
+          if (( ${#missing[@]} > 0 )); then
+            echo "::error title=QA credentials unavailable::GitHub Actions did not supply ${missing[*]}"
             exit 1
           fi
           node smoke.mjs entryflow
@@ -57,8 +60,11 @@ jobs:
           MSUO_QA_EMAIL: ${{ secrets.OPTISPEC_QA_EMAIL }}
           MSUO_QA_PASSWORD: ${{ secrets.OPTISPEC_QA_PASSWORD }}
         run: |
-          if [[ -z "$MSUO_QA_EMAIL" || -z "$MSUO_QA_PASSWORD" ]]; then
-            echo "::error::GitHub Actions did not supply OPTISPEC_QA_EMAIL or OPTISPEC_QA_PASSWORD."
+          missing=()
+          [[ -n "$MSUO_QA_EMAIL" ]] || missing+=("OPTISPEC_QA_EMAIL")
+          [[ -n "$MSUO_QA_PASSWORD" ]] || missing+=("OPTISPEC_QA_PASSWORD")
+          if (( ${#missing[@]} > 0 )); then
+            echo "::error title=QA credentials unavailable::GitHub Actions did not supply ${missing[*]}"
             exit 1
           fi
           node smoke.mjs optispec
