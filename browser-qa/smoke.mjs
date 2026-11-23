@@ -184,7 +184,10 @@ async function addRecord() {
   if (await row().count() !== 1) throw new Error('Synthetic record is ambiguous.');
 }
 
-async function selectCalendarDay(date, column, divider, heading) {
+async function selectCalendarDay(date, column, headings) {
+  const { from, till } = headings;
+  const heading = column === 'From' ? from : till;
+  const sideBySide = till.x - from.x >= 100;
   const day = String(date.getDate());
   const label = new Intl.DateTimeFormat('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
@@ -198,9 +201,11 @@ async function selectCalendarDay(date, column, divider, heading) {
     if (!rect) continue;
     const x = rect.x + rect.width / 2;
     const y = rect.y + rect.height / 2;
-    if ((column === 'From' ? x < divider : x >= divider) &&
-        x >= heading.x - 10 && x < heading.x + 410 &&
-        y > below && y < below + 410 && y < 936) {
+    const insideCalendar = sideBySide
+      ? (column === 'From' ? x < till.x - 4 : x >= till.x - 4)
+      : (column === 'From' ? y < till.y : y > till.y);
+    if (insideCalendar && x >= heading.x - 20 && x < heading.x + 425 &&
+        y > below && y < below + 420 && y < 936) {
       bounds.push({ x, y });
     }
   }
@@ -218,16 +223,18 @@ async function generatePdf() {
   console.log('PASS: opened PDF dialog');
   const from = await ui('From').boundingBox();
   const till = await ui('Till').boundingBox();
-  if (!from || !till || till.x - from.x < 100) throw new Error('Could not locate the two calendars.');
+  stage = 'locate From and Till calendars';
+  if (!from || !till) throw new Error('Could not locate the two calendars.');
+  console.log('Calendar layout: ' + (till.x - from.x >= 100 ? 'side by side' : 'stacked'));
 
   const today = await page.evaluate(() => {
     const now = new Date();
     return { year: now.getFullYear(), month: now.getMonth() + 1, day: now.getDate() };
   });
   stage = 'select From date';
-  await selectCalendarDay(new Date(today.year, today.month - 1, 1, 12), 'From', till.x - 4, from);
+  await selectCalendarDay(new Date(today.year, today.month - 1, 1, 12), 'From', { from, till });
   stage = 'select Till date';
-  await selectCalendarDay(new Date(today.year, today.month - 1, today.day, 12), 'Till', till.x - 4, till);
+  await selectCalendarDay(new Date(today.year, today.month - 1, today.day, 12), 'Till', { from, till });
   console.log('PASS: clicked the From and Till calendar dates');
   stage = 'submit PDF request';
   const candidates = button(app.pdf);
