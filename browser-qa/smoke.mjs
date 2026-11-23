@@ -184,12 +184,47 @@ async function addRecord() {
   if (await row().count() !== 1) throw new Error('Synthetic record is ambiguous.');
 }
 
+async function selectCalendarDay(day, column, divider, heading) {
+  const dateCell = button(String(day)).or(ui(String(day)));
+  const below = heading.y + heading.height;
+  const bounds = [];
+  for (const cell of await dateCell.all()) {
+    const rect = await cell.boundingBox();
+    if (!rect) continue;
+    const x = rect.x + rect.width / 2;
+    const y = rect.y + rect.height / 2;
+    if ((column === 'From' ? x < divider : x >= divider) &&
+        x >= heading.x - 10 && x < heading.x + 410 &&
+        y > below && y < below + 410 && y < 936) {
+      bounds.push({ x, y });
+    }
+  }
+  bounds.sort((a, b) => a.y - b.y);
+  if (!bounds.length) throw new Error('Calendar day was not visible.');
+  // A trailing date from the following month can repeat the same day number.
+  await page.mouse.click(bounds[0].x, bounds[0].y);
+}
+
 async function generatePdf() {
   stage = 'open PDF controls';
   await clickControl(button(app.pdfToolbar ?? app.pdf));
   await ui('From').waitFor();
   await ui('Till').waitFor();
   console.log('PASS: opened PDF dialog');
+  const from = await ui('From').boundingBox();
+  const till = await ui('Till').boundingBox();
+  if (!from || !till || till.x - from.x < 100) throw new Error('Could not locate the two calendars.');
+
+  const today = await page.evaluate(() => {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() + 1, day: now.getDate() };
+  });
+  await ui(String(today.day)).first().waitFor();
+  stage = 'select From date';
+  await selectCalendarDay(1, 'From', till.x - 4, from);
+  stage = 'select Till date';
+  await selectCalendarDay(today.day, 'Till', till.x - 4, till);
+  console.log('PASS: clicked the From and Till calendar dates');
   stage = 'submit PDF request';
   const candidates = button(app.pdf);
   // EntryFlow's toolbar and form share the same label. The form button
@@ -202,6 +237,12 @@ async function generatePdf() {
     clickControl(submit),
   ]);
   stage = 'verify downloaded PDF';
+  const month = String(today.month).padStart(2, '0');
+  const tillDay = String(today.day).padStart(2, '0');
+  const fileDateRange = `${today.year}-${month}-01_${today.year}-${month}-${tillDay}.pdf`;
+  if (!file.suggestedFilename().endsWith(fileDateRange)) {
+    throw new Error('The downloaded report does not match the selected date range.');
+  }
   const path = await file.path();
   const handle = await open(path, 'r');
   try {
