@@ -28,7 +28,7 @@ let possibleRecord = false;
 const exact = { exact: true };
 const ui = text => page.getByLabel(text, exact).or(page.getByText(text, exact)).filter({ visible: true });
 const button = name => page.getByRole('button', { name, exact: true }).filter({ visible: true });
-const row = () => ui(runId);
+const row = () => appName === 'optispec' ? ui('Device-ID: ' + runId) : ui(runId);
 const signOutControl = () => {
   const name = /^sign\s*out$/i;
   return page.getByRole('button', { name })
@@ -167,19 +167,28 @@ async function footerControl(kind) {
 
 async function addRecord() {
   await footerControl('add');
+  stage = 'fill synthetic record form';
   if (appName === 'entryflow') {
     await fillField('Name', runId);
     await fillField('Amount', '1');
     await fillField('Account', 'QA Test');
+    stage = 'submit EntryFlow synthetic record';
     possibleRecord = true;
-    await clickControl(button('Confirm'));
+    const submit = button('Confirm');
+    await clickControl(submit);
+    await submit.waitFor({ state: 'hidden' });
   } else {
     await fillField('Device-ID', runId);
     await fillField('URL', 'http://192.0.2.1:9/qa');
     await fillField('Device-Group', runId + '-group');
+    stage = 'submit OptiSpec synthetic record';
     possibleRecord = true;
-    await clickControl(button('Add Device'));
+    const submit = button('Add Device');
+    await clickControl(submit);
+    await submit.waitFor({ state: 'hidden' });
   }
+  stage = 'verify synthetic record on dashboard';
+  await enableSemantics();
   await row().waitFor();
   if (await row().count() !== 1) throw new Error('Synthetic record is ambiguous.');
 }
@@ -281,7 +290,24 @@ async function removeRecord() {
     await ui('Do you really want to remove this device?').waitFor();
   }
   const dialogRemove = page.getByRole('dialog').getByRole('button', { name: 'Remove', exact: true });
-  await clickControl(await dialogRemove.count() === 1 ? dialogRemove : button('Remove'));
+  const remove = button('Remove');
+  if (await dialogRemove.count() === 1) {
+    await clickControl(dialogRemove);
+  } else if (await remove.count() === 1) {
+    await clickControl(remove);
+  } else {
+    // The desktop OptiSpec toolbar also has a Remove button.
+    const message = ui('Do you really want to remove this device?');
+    const anchor = await message.boundingBox();
+    if (!anchor) return false;
+    const candidates = [];
+    for (const control of await remove.all()) {
+      const rect = await control.boundingBox();
+      if (rect && Math.abs(rect.y - anchor.y) < 140 && rect.y > anchor.y) candidates.push(control);
+    }
+    if (candidates.length !== 1) return false;
+    await clickControl(candidates[0]);
+  }
   await row().waitFor({ state: 'hidden' });
   return true;
 }
