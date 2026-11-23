@@ -186,33 +186,31 @@ async function addRecord() {
 
 async function selectCalendarDay(date, column, headings) {
   const { from, till } = headings;
-  const heading = column === 'From' ? from : till;
   const sideBySide = till.x - from.x >= 100;
-  const day = String(date.getDate());
   const label = new Intl.DateTimeFormat('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   }).format(date);
-  const dateCell = ui(label).or(button(label)).or(ui(day)).or(button(day));
-  await dateCell.first().waitFor();
-  const below = heading.y + heading.height;
-  const bounds = [];
-  for (const cell of await dateCell.all()) {
+  const dateCells = ui(label).or(button(label));
+  await dateCells.first().waitFor();
+  const centers = [];
+  const above = Math.min(from.y, till.y);
+  for (const cell of await dateCells.all()) {
     const rect = await cell.boundingBox();
     if (!rect) continue;
     const x = rect.x + rect.width / 2;
     const y = rect.y + rect.height / 2;
-    const insideCalendar = sideBySide
-      ? (column === 'From' ? x < till.x - 4 : x >= till.x - 4)
-      : (column === 'From' ? y < till.y : y > till.y);
-    if (insideCalendar && x >= heading.x - 20 && x < heading.x + 425 &&
-        y > below && y < below + 420 && y < 936) {
-      bounds.push({ x, y });
+    if (y <= above || x < 0 || x >= 1365 || y >= 936) continue;
+    if (!centers.some(other => Math.abs(x - other.x) < 8 && Math.abs(y - other.y) < 8)) {
+      centers.push({ x, y });
     }
   }
-  bounds.sort((a, b) => a.y - b.y);
-  if (!bounds.length) throw new Error('Calendar day was not visible.');
-  // A trailing date from the following month can repeat the same day number.
-  await page.mouse.click(bounds[0].x, bounds[0].y);
+  centers.sort((a, b) => sideBySide ? a.x - b.x : a.y - b.y);
+  if (centers.length !== 2) {
+    console.log('Calendar date matches within viewport: ' + centers.length);
+    throw new Error('Expected one matching date in each calendar.');
+  }
+  const { x, y } = centers[column === 'From' ? 0 : 1];
+  await page.mouse.click(x, y);
 }
 
 async function generatePdf() {
@@ -234,7 +232,8 @@ async function generatePdf() {
   stage = 'select From date';
   await selectCalendarDay(new Date(today.year, today.month - 1, 1, 12), 'From', { from, till });
   stage = 'select Till date';
-  await selectCalendarDay(new Date(today.year, today.month - 1, today.day, 12), 'Till', { from, till });
+  const lastDay = Math.max(1, today.day - 1);
+  await selectCalendarDay(new Date(today.year, today.month - 1, lastDay, 12), 'Till', { from, till });
   console.log('PASS: clicked the From and Till calendar dates');
   stage = 'submit PDF request';
   const candidates = button(app.pdf);
@@ -249,7 +248,7 @@ async function generatePdf() {
   ]);
   stage = 'verify downloaded PDF';
   const month = String(today.month).padStart(2, '0');
-  const tillDay = String(today.day).padStart(2, '0');
+  const tillDay = String(lastDay).padStart(2, '0');
   const fileDateRange = `${today.year}-${month}-01_${today.year}-${month}-${tillDay}.pdf`;
   if (!file.suggestedFilename().endsWith(fileDateRange)) {
     throw new Error('The downloaded report does not match the selected date range.');
