@@ -2,6 +2,11 @@ name: Browser QA
 
 on:
   workflow_dispatch:
+    inputs:
+      recover_entry_id:
+        description: 'Optional synthetic EntryFlow record ID for cleanup only'
+        type: string
+        required: false
   push:
     branches: [main]
     paths:
@@ -45,6 +50,8 @@ jobs:
         env:
           MSUO_QA_EMAIL: ${{ secrets.ENTRYFLOW_QA_EMAIL }}
           MSUO_QA_PASSWORD: ${{ secrets.ENTRYFLOW_QA_PASSWORD }}
+          RECOVERY_INPUT: ${{ inputs.recover_entry_id }}
+          PUSH_MESSAGE: ${{ github.event_name == 'push' && github.event.head_commit.message || '' }}
         run: |
           missing=()
           [[ -n "$MSUO_QA_EMAIL" ]] || missing+=("ENTRYFLOW_QA_EMAIL")
@@ -53,9 +60,13 @@ jobs:
             echo "::error title=QA credentials unavailable::GitHub Actions did not supply ${missing[*]}"
             exit 1
           fi
+          export QA_RECOVERY_ENTRY_ID="$RECOVERY_INPUT"
+          if [[ "$PUSH_MESSAGE" =~ ^Recover\ EntryFlow\ QA\ (qa-[0-9a-f]{8}-[0-9a-f]{3})$ ]]; then
+            export QA_RECOVERY_ENTRY_ID="${BASH_REMATCH[1]}"
+          fi
           node smoke.mjs entryflow
       - name: Run OptiSpec smoke test
-        if: matrix.app == 'optispec'
+        if: matrix.app == 'optispec' && !inputs.recover_entry_id && !startsWith(github.event.head_commit.message, 'Recover EntryFlow QA ')
         env:
           MSUO_QA_EMAIL: ${{ secrets.OPTISPEC_QA_EMAIL }}
           MSUO_QA_PASSWORD: ${{ secrets.OPTISPEC_QA_PASSWORD }}

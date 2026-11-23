@@ -13,7 +13,11 @@ const { MSUO_QA_EMAIL: email, MSUO_QA_PASSWORD: password } = process.env;
 if (!Object.hasOwn(apps, appName)) throw new Error('Select entryflow or optispec.');
 if (!startupOnly && (!email || !password)) throw new Error('Both QA secrets are required.');
 
-const runId = 'qa-' + randomUUID().slice(0, 12);
+const recoveryId = process.env.QA_RECOVERY_ENTRY_ID;
+if (recoveryId && (appName !== 'entryflow' || !/^qa-[0-9a-f]{8}-[0-9a-f]{3}$/.test(recoveryId))) {
+  throw new Error('Recovery requires a synthetic EntryFlow record ID.');
+}
+const runId = recoveryId || 'qa-' + randomUUID().slice(0, 12);
 const timeout = 25000;
 const browser = await chromium.launch({ channel: 'chrome' });
 const page = await browser.newPage({ viewport: { width: 1365, height: 936 }, acceptDownloads: true });
@@ -185,26 +189,42 @@ try {
   if (!startupOnly) {
     stage = 'sign-in';
     await signIn();
-    stage = 'sign-out';
-    await signOut();
-    stage = 'sign-in again';
-    await signIn();
-    console.log('PASS: sign-in, sign-out, and sign-in again');
-    stage = 'create synthetic record';
-    await addRecord();
-    console.log('PASS: synthetic record created and visible');
-    stage = 'PDF download';
-    await generatePdf();
-    console.log('PASS: downloaded file has a PDF signature');
-    stage = 'remove synthetic record';
-    if (!await removeRecord()) throw new Error('Could not safely identify the synthetic record.');
-    possibleRecord = false;
-    console.log('PASS: synthetic record removed and no longer visible');
+    if (recoveryId) {
+      stage = 'recover previous synthetic entry';
+      possibleRecord = true;
+      const empty = ui('No accounts or entries yet');
+      await row().or(empty).waitFor();
+      if (await row().count() === 1) {
+        if (!await removeRecord()) throw new Error('Could not safely identify the entry for removal.');
+        console.log('PASS: previous synthetic entry removed');
+      } else if (await empty.isVisible() && await row().count() === 0) {
+        console.log('PASS: EntryFlow has no accounts or entries');
+      } else {
+        throw new Error('The entry could not be located unambiguously.');
+      }
+      possibleRecord = false;
+    } else {
+      stage = 'sign-out';
+      await signOut();
+      stage = 'sign-in again';
+      await signIn();
+      console.log('PASS: sign-in, sign-out, and sign-in again');
+      stage = 'create synthetic record';
+      await addRecord();
+      console.log('PASS: synthetic record created and visible');
+      stage = 'PDF download';
+      await generatePdf();
+      console.log('PASS: downloaded file has a PDF signature');
+      stage = 'remove synthetic record';
+      if (!await removeRecord()) throw new Error('Could not safely identify the synthetic record.');
+      possibleRecord = false;
+      console.log('PASS: synthetic record removed and no longer visible');
+    }
   }
 } catch {
   // Playwright errors can include form data, so report the stage without exception details.
   console.error('::error title=Browser smoke test failed::' + stage);
-  if (possibleRecord && stage !== 'remove synthetic record') {
+  if (possibleRecord && !recoveryId && stage !== 'remove synthetic record') {
     try {
       // Reset any open dialog and selection while staying inside the same test account.
       await page.reload({ waitUntil: 'domcontentloaded' });
