@@ -75,10 +75,50 @@ async function fillField(name, value) {
 }
 
 async function signIn() {
+  const signInStage = stage;
+  stage = signInStage + ' / email field';
   await fillField('Email', email);
+  stage = signInStage + ' / password field';
   await fillField('Password', password);
-  await clickControl(button('Sign In'));
-  await ui('Sign Out').waitFor();
+  stage = signInStage + ' / submit';
+  const ingress = 'https://' + appName + '-api.msuo-runtime.io/ingress';
+  let sent = false;
+  let status;
+  const onRequest = request => {
+    if (request.url() === ingress && request.method() === 'POST') sent = true;
+  };
+  const onResponse = response => {
+    if (response.url() === ingress && response.request().method() === 'POST') {
+      status ??= response.status();
+    }
+  };
+  page.on('request', onRequest);
+  page.on('response', onResponse);
+  try {
+    await clickControl(button('Sign In'));
+    stage = signInStage + ' / wait for dashboard';
+    await ui('Sign Out').waitFor();
+    stage = signInStage;
+  } catch (error) {
+    const atSignIn = new URL(page.url()).pathname === '/authorization';
+    console.log('Sign-in diagnostic: POST sent=' + sent + ', HTTP status=' + (status ?? 'none') +
+      ', still on sign-in screen=' + atSignIn);
+    if (atSignIn) {
+      const messages = [
+        'Authentication failed.',
+        'Invalid or missing E-Mail.',
+        'E-Mail does not exist.',
+        'Unable to connect to the server. Please try again.',
+      ];
+      for (const message of messages) {
+        if (await ui(message).first().isVisible()) console.log('Sign-in message: ' + message);
+      }
+    }
+    throw error;
+  } finally {
+    page.off('request', onRequest);
+    page.off('response', onResponse);
+  }
 }
 
 async function signOut() {
@@ -193,8 +233,14 @@ try {
       stage = 'recover previous synthetic entry';
       possibleRecord = true;
       const empty = ui('No accounts or entries yet');
-      await row().or(empty).waitFor();
+      const found = await row().or(empty).first().waitFor().then(() => true, () => false);
+      if (!found) {
+        const markerVisible = await ui(new RegExp(runId)).first().isVisible();
+        console.log('Cleanup diagnostic: synthetic identifier visible in dashboard=' + markerVisible);
+        throw new Error('The exact synthetic row could not be located.');
+      }
       if (await row().count() === 1) {
+        stage = 'remove located synthetic entry';
         if (!await removeRecord()) throw new Error('Could not safely identify the entry for removal.');
         console.log('PASS: previous synthetic entry removed');
       } else if (await empty.isVisible() && await row().count() === 0) {

@@ -66,7 +66,7 @@ jobs:
           fi
           node smoke.mjs entryflow
       - name: Run OptiSpec smoke test
-        if: matrix.app == 'optispec' && !inputs.recover_entry_id && !startsWith(github.event.head_commit.message, 'Recover EntryFlow QA ')
+        if: matrix.app == 'optispec' && !inputs.recover_entry_id
         env:
           MSUO_QA_EMAIL: ${{ secrets.OPTISPEC_QA_EMAIL }}
           MSUO_QA_PASSWORD: ${{ secrets.OPTISPEC_QA_PASSWORD }}
