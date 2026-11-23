@@ -3,6 +3,10 @@ name: Browser QA
 on:
   workflow_dispatch:
     inputs:
+      pdf_only:
+        description: Check the PDF download without creating a record
+        type: boolean
+        default: false
       recover_entry_id:
         description: 'Optional synthetic EntryFlow record ID for cleanup only'
         type: string
@@ -50,6 +54,7 @@ jobs:
         env:
           MSUO_QA_EMAIL: ${{ secrets.ENTRYFLOW_QA_EMAIL }}
           MSUO_QA_PASSWORD: ${{ secrets.ENTRYFLOW_QA_PASSWORD }}
+          QA_PDF_ONLY: ${{ github.event_name == 'push' || inputs.pdf_only }}
           RECOVERY_INPUT: ${{ inputs.recover_entry_id }}
           PUSH_MESSAGE: ${{ github.event_name == 'push' && github.event.head_commit.message || '' }}
         run: |
@@ -70,6 +75,7 @@ jobs:
         env:
           MSUO_QA_EMAIL: ${{ secrets.OPTISPEC_QA_EMAIL }}
           MSUO_QA_PASSWORD: ${{ secrets.OPTISPEC_QA_PASSWORD }}
+          QA_PDF_ONLY: ${{ github.event_name == 'push' || inputs.pdf_only }}
         run: |
           missing=()
           [[ -n "$MSUO_QA_EMAIL" ]] || missing+=("OPTISPEC_QA_EMAIL")

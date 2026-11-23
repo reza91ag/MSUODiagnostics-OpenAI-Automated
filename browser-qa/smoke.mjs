@@ -185,9 +185,12 @@ async function addRecord() {
 }
 
 async function generatePdf() {
+  stage = 'open PDF controls';
   await clickControl(button(app.pdfToolbar ?? app.pdf));
   await ui('From').waitFor();
   await ui('Till').waitFor();
+  console.log('PASS: opened PDF dialog');
+  stage = 'submit PDF request';
   const candidates = button(app.pdf);
   // EntryFlow's toolbar and form share the same label. The form button
   // is the one inside Flutter's active dialog route.
@@ -198,6 +201,7 @@ async function generatePdf() {
     page.waitForEvent('download', { timeout }),
     clickControl(submit),
   ]);
+  stage = 'verify downloaded PDF';
   const path = await file.path();
   const handle = await open(path, 'r');
   try {
@@ -263,16 +267,18 @@ try {
       stage = 'sign-in again';
       await signIn();
       console.log('PASS: sign-in, sign-out, and sign-in again');
-      stage = 'create synthetic record';
-      await addRecord();
-      console.log('PASS: synthetic record created and visible');
       stage = 'PDF download';
       await generatePdf();
       console.log('PASS: downloaded file has a PDF signature');
-      stage = 'remove synthetic record';
-      if (!await removeRecord()) throw new Error('Could not safely identify the synthetic record.');
-      possibleRecord = false;
-      console.log('PASS: synthetic record removed and no longer visible');
+      if (process.env.QA_PDF_ONLY !== 'true') {
+        stage = 'create synthetic record';
+        await addRecord();
+        console.log('PASS: synthetic record created and visible');
+        stage = 'remove synthetic record';
+        if (!await removeRecord()) throw new Error('Could not safely identify the synthetic record.');
+        possibleRecord = false;
+        console.log('PASS: synthetic record removed and no longer visible');
+      }
     }
   }
 } catch {
