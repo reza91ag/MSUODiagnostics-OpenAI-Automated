@@ -1,0 +1,51 @@
+name: Browser QA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/browser-qa.yml'
+      - 'browser-qa/**'
+  schedule:
+    - cron: '13 0,4,7,10,14,17,21 * * *'
+      timezone: Europe/Vienna
+    - cron: '41 1,5,8,11,15,18,22 * * *'
+      timezone: Europe/Vienna
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: ${{ matrix.app }} smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        app: ${{ fromJSON(github.event_name != 'schedule' && '["entryflow","optispec"]' || github.event.schedule == '13 0,4,7,10,14,17,21 * * *' && '["entryflow"]' || '["optispec"]') }}
+    concurrency:
+      group: browser-qa-${{ matrix.app }}
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: browser-qa
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - name: Verify public startup
+        if: github.event_name == 'push'
+        run: node smoke.mjs "${{ matrix.app }}" --startup-only
+      - name: Vary scheduled start time
+        if: github.event_name == 'schedule'
+        run: sleep "$((RANDOM % 481))"
+      - name: Run authenticated smoke test
+        if: github.event_name != 'push'
+        env:
+          MSUO_QA_EMAIL: ${{ secrets.MSUO_QA_EMAIL }}
+          MSUO_QA_PASSWORD: ${{ secrets.MSUO_QA_PASSWORD }}
+        run: node smoke.mjs "${{ matrix.app }}"
