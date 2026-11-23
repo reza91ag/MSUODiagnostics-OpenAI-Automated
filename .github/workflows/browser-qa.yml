@@ -37,15 +37,21 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci
-      - name: Verify public startup
-        if: github.event_name == 'push'
-        run: node smoke.mjs "${{ matrix.app }}" --startup-only
       - name: Vary scheduled start time
         if: github.event_name == 'schedule'
         run: sleep "$((RANDOM % 481))"
-      - name: Run authenticated smoke test
-        if: github.event_name != 'push'
+      - name: Run browser smoke test
         env:
-          MSUO_QA_EMAIL: ${{ secrets.MSUO_QA_EMAIL }}
-          MSUO_QA_PASSWORD: ${{ secrets.MSUO_QA_PASSWORD }}
-        run: node smoke.mjs "${{ matrix.app }}"
+          QA_APP: ${{ matrix.app }}
+          MSUO_QA_EMAIL: ${{ secrets[format('{0}_QA_EMAIL', matrix.app == 'entryflow' && 'ENTRYFLOW' || 'OPTISPEC')] }}
+          MSUO_QA_PASSWORD: ${{ secrets[format('{0}_QA_PASSWORD', matrix.app == 'entryflow' && 'ENTRYFLOW' || 'OPTISPEC')] }}
+        run: |
+          if [[ -z "$MSUO_QA_EMAIL" || -z "$MSUO_QA_PASSWORD" ]]; then
+            if [[ "$GITHUB_EVENT_NAME" == push ]]; then
+              node smoke.mjs "$QA_APP" --startup-only
+              exit $?
+            fi
+            echo "::error::Configure ${QA_APP^^}_QA_EMAIL and ${QA_APP^^}_QA_PASSWORD in repository secrets."
+            exit 1
+          fi
+          node smoke.mjs "$QA_APP"
