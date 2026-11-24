@@ -30,6 +30,9 @@ jobs:
     name: ${{ matrix.app }} smoke test
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    outputs:
+      entryflow_windows: ${{ steps.entryflow.outputs.dashboard_windows }}
+      optispec_windows: ${{ steps.optispec.outputs.dashboard_windows }}
     strategy:
       fail-fast: false
       matrix:
@@ -50,6 +53,7 @@ jobs:
         if: github.event_name == 'schedule'
         run: sleep "$((RANDOM % 481))"
       - name: Run EntryFlow smoke test
+        id: entryflow
         if: matrix.app == 'entryflow'
         env:
           MSUO_QA_EMAIL: ${{ secrets.ENTRYFLOW_QA_EMAIL }}
@@ -74,6 +78,7 @@ jobs:
           fi
           node smoke.mjs entryflow
       - name: Run OptiSpec smoke test
+        id: optispec
         if: matrix.app == 'optispec' && !inputs.recover_entry_id
         env:
           MSUO_QA_EMAIL: ${{ secrets.OPTISPEC_QA_EMAIL }}
@@ -92,3 +97,20 @@ jobs:
             export QA_RECOVERY_ENTRY_ID="${BASH_REMATCH[2]}"
           fi
           node smoke.mjs optispec
+
+  confirm:
+    name: Confirm dashboard updates in app log files
+    needs: smoke
+    if: always() && (needs.smoke.outputs.entryflow_windows || needs.smoke.outputs.optispec_windows)
+    runs-on: [self-hosted, windows]
+    environment: production
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify completed UpdateDashboard lifecycles
+        shell: powershell
+        env:
+          MSUO_DEPLOY_DIR: ${{ vars.MSUO_DEPLOY_DIR }}
+          ENTRYFLOW_WINDOWS: ${{ needs.smoke.outputs.entryflow_windows }}
+          OPTISPEC_WINDOWS: ${{ needs.smoke.outputs.optispec_windows }}
+        run: py -3 browser-qa/confirm_dashboard_updates.py

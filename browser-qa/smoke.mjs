@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { open } from 'node:fs/promises';
+import { appendFile, open } from 'node:fs/promises';
 import { chromium } from 'playwright';
 
 const apps = {
@@ -25,6 +25,7 @@ page.setDefaultTimeout(timeout);
 
 let stage = 'startup';
 let possibleRecord = false;
+const dashboardWindows = [];
 const exact = { exact: true };
 const ui = text => page.getByLabel(text, exact).or(page.getByText(text, exact)).filter({ visible: true });
 const button = name => page.getByRole('button', { name, exact: true }).filter({ visible: true });
@@ -180,6 +181,33 @@ async function footerControl(kind) {
   await page.mouse.click(x + width / 2, y + height / 2);
 }
 
+async function clickDashboardAction(control, command) {
+  const ingress = 'https://' + appName + '-api.msuo-runtime.io/ingress';
+  const commandPattern = new RegExp('"Command"\\s*:\\s*"' + command + '"', 'i');
+  let sentAt;
+  let request;
+  const recordRequest = candidate => {
+    if (!request && candidate.url() === ingress && candidate.method() === 'POST' &&
+        commandPattern.test(candidate.postData() ?? '')) {
+      request = candidate;
+      sentAt = new Date().toISOString();
+    }
+  };
+  page.on('request', recordRequest);
+  try {
+    const pendingResponse = page.waitForResponse(response =>
+      request && response.request() === request, { timeout }).catch(() => null);
+    await clickControl(control);
+    const response = await pendingResponse;
+    if (!sentAt) throw new Error('No dashboard action was submitted.');
+    dashboardWindows.push({ command, sentAt, endAt: new Date().toISOString() });
+    console.log('Submitted dashboard ' + command + ' request for app-log verification.');
+    if (response) await response.finished();
+  } finally {
+    page.off('request', recordRequest);
+  }
+}
+
 async function addRecord() {
   await footerControl('add');
   stage = 'fill synthetic record form';
@@ -199,8 +227,7 @@ async function addRecord() {
     stage = 'submit EntryFlow synthetic record';
     possibleRecord = true;
     const submit = button('Confirm');
-    await clickControl(submit);
-    console.log('PASS: clicked EntryFlow Confirm');
+    await clickDashboardAction(submit, 'Add');
     stage = 'wait for EntryFlow entry form to close';
     try {
       await authField('Name').waitFor({ state: 'hidden' });
@@ -223,7 +250,7 @@ async function addRecord() {
     stage = 'submit OptiSpec synthetic record';
     possibleRecord = true;
     const submit = button('Add Device');
-    await clickControl(submit);
+    await clickDashboardAction(submit, 'Add');
     await submit.waitFor({ state: 'hidden' });
   }
   stage = 'verify synthetic record on dashboard';
@@ -355,10 +382,7 @@ async function removeRecord() {
   if (candidates.length !== 1) return false;
 
   stage = 'press the dialog Remove button';
-  await clickControl(candidates[0]);
-  await cancel.waitFor({ state: 'hidden' });
-  stage = 'verify selected synthetic record is gone';
-  await row().first().waitFor({ state: 'hidden' });
+  await clickDashboardAction(candidates[0], 'Remove');
   return true;
 }
 
@@ -381,7 +405,7 @@ try {
       if (await row().count() === 1 || (appName === 'optispec' && await row().first().isVisible())) {
         stage = 'remove located synthetic entry';
         if (!await removeRecord()) throw new Error('Could not safely identify the entry for removal.');
-        console.log('PASS: previous synthetic entry removed');
+        console.log('Removal submitted for app-log confirmation');
       } else if (await empty.isVisible() && await row().count() === 0) {
         console.log('PASS: dashboard is empty');
       } else {
@@ -403,7 +427,7 @@ try {
         console.log('PASS: synthetic test row visible');
         stage = 'remove synthetic record';
         if (!await removeRecord()) throw new Error('Could not safely identify the synthetic record.');
-        console.log('PASS: selected synthetic record removed and no longer visible');
+        console.log('Removal submitted for app-log confirmation');
         if (selectedDeviceId && selectedDeviceId !== runId) {
           stage = 'verify newly submitted OptiSpec device';
           throw new Error('An older QA device was removed. The new device remains unverified.');
@@ -429,5 +453,8 @@ try {
   if (possibleRecord) console.error('::error title=Cleanup unverified::Synthetic record ' + runId);
   process.exitCode = 1;
 } finally {
+  if (process.env.GITHUB_OUTPUT && dashboardWindows.length) {
+    await appendFile(process.env.GITHUB_OUTPUT, 'dashboard_windows=' + JSON.stringify(dashboardWindows) + '\n');
+  }
   await browser.close();
 }
