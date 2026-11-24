@@ -1,5 +1,6 @@
 """Serve the public MSUO website on a dedicated localhost port."""
 from argparse import ArgumentParser
+from base64 import b64decode
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -29,6 +30,8 @@ def main():
         'Allow: /\n'
         'Sitemap: https://www.msuo-runtime.io/sitemap.xml\n'
     ).encode("utf-8")
+    favicon = b64decode((directory / "favicon.png.b64").read_text(encoding="ascii").strip())
+    routes["/favicon.png"] = ("image/png", favicon)
     routes["/sitemap.xml"] = ("application/xml; charset=utf-8", sitemap)
     routes["/robots.txt"] = ("text/plain; charset=utf-8", robots)
     for number in range(1, 4):
