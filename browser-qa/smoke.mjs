@@ -28,7 +28,14 @@ let possibleRecord = false;
 const exact = { exact: true };
 const ui = text => page.getByLabel(text, exact).or(page.getByText(text, exact)).filter({ visible: true });
 const button = name => page.getByRole('button', { name, exact: true }).filter({ visible: true });
-const row = () => appName === 'optispec' ? ui('Device-ID: ' + runId) : ui(runId);
+const deviceRows = () => ui(/^Device-ID:\s*\S+/i);
+const knownDevices = new Set([
+  'qa-10c6b569-bd3', 'qa-5ff37d37-ea8', 'qa-836aa8f3-ade', 'qa-a6e3cf5b-1a4', runId,
+]);
+let selectedDeviceId;
+const row = () => appName === 'optispec'
+  ? ui(new RegExp('^Device-ID:\\s*' + (selectedDeviceId ?? runId) + '(?=\\s|$)', 'i'))
+  : ui(runId);
 const signOutControl = () => {
   const name = /^sign\s*out$/i;
   return page.getByRole('button', { name })
@@ -179,11 +186,35 @@ async function addRecord() {
     await fillField('Name', runId);
     await fillField('Amount', '1');
     await fillField('Account', 'QA Test');
+    stage = 'select EntryFlow currency';
+    const currency = ui('Currency').or(button('Currency')).first();
+    if (await currency.isVisible()) {
+      await clickControl(currency);
+      await clickControl(page.getByRole('option', { name: 'EUR', exact: true }).or(ui('EUR')).first());
+    } else {
+      // A remembered EUR choice can be shown as the selected value.
+      await ui('EUR').or(button('EUR')).first().waitFor();
+    }
     stage = 'submit EntryFlow synthetic record';
     possibleRecord = true;
     const submit = button('Confirm');
     await clickControl(submit);
-    await submit.waitFor({ state: 'hidden' });
+    console.log('PASS: clicked EntryFlow Confirm');
+    stage = 'wait for EntryFlow entry form to close';
+    try {
+      await authField('Name').waitFor({ state: 'hidden' });
+    } catch (error) {
+      for (const message of [
+        'Amount must be a valid number.',
+        'Date must be a real calendar day in DD/MM/YYYY.',
+        'An exchange rate is required before this entry can be sent.',
+        'The entry could not be saved.',
+        'Server communication failure. Please try again.',
+      ]) {
+        if (await ui(message).first().isVisible()) console.log('EntryFlow form message: ' + message);
+      }
+      throw error;
+    }
   } else {
     await fillField('Device-ID', runId);
     await fillField('URL', 'http://192.0.2.1:9/qa');
@@ -196,8 +227,16 @@ async function addRecord() {
   }
   stage = 'verify synthetic record on dashboard';
   await enableSemantics();
-  await row().waitFor();
-  if (await row().count() !== 1) throw new Error('Synthetic record is ambiguous.');
+  if (appName === 'optispec') {
+    const top = deviceRows().first();
+    await top.waitFor();
+    const label = await top.evaluate(element => element.getAttribute('aria-label') || element.textContent);
+    const id = /^Device-ID:\s*(qa-[0-9a-f]{8}-[0-9a-f]{3})(?=\s|$)/i.exec(label?.trim() ?? '')?.[1];
+    if (!knownDevices.has(id)) throw new Error('The top device is outside the known QA set.');
+    selectedDeviceId = id;
+    console.log('OptiSpec top QA device: ' + id + ', newly submitted=' + (id === runId));
+  }
+  await row().first().waitFor();
 }
 
 async function selectCalendarDay(date, column, headings) {
@@ -281,7 +320,8 @@ async function generatePdf() {
 }
 
 async function removeRecord() {
-  if (!await row().isVisible() || await row().count() !== 1) return false;
+  if (!await row().first().isVisible()) return false;
+  if (appName === 'entryflow' && await row().count() !== 1) return false;
   if (appName === 'entryflow') {
     const selected = page.locator('flt-semantics[aria-checked="true"], flt-semantics[aria-selected="true"]').filter({ visible: true });
     // Begin deletion only from a freshly signed-in dashboard, with no existing selection.
@@ -291,7 +331,7 @@ async function removeRecord() {
     await ui('Remove selected entries?').waitFor();
     await ui(/^Do you really want to remove 1 selected entry\?$/i).waitFor();
   } else {
-    await clickControl(row());
+    await clickControl(row().first());
     await footerControl('remove');
     await ui('Remove device?').waitFor();
     await ui('Do you really want to remove this device?').waitFor();
@@ -315,7 +355,7 @@ async function removeRecord() {
     if (candidates.length !== 1) return false;
     await clickControl(candidates[0]);
   }
-  await row().waitFor({ state: 'hidden' });
+  await row().first().waitFor({ state: 'hidden' });
   return true;
 }
 
@@ -357,11 +397,15 @@ try {
       if (process.env.QA_PDF_ONLY !== 'true') {
         stage = 'create synthetic record';
         await addRecord();
-        console.log('PASS: synthetic record created and visible');
+        console.log('PASS: synthetic test row visible');
         stage = 'remove synthetic record';
         if (!await removeRecord()) throw new Error('Could not safely identify the synthetic record.');
+        console.log('PASS: selected synthetic record removed and no longer visible');
+        if (selectedDeviceId && selectedDeviceId !== runId) {
+          stage = 'verify newly submitted OptiSpec device';
+          throw new Error('An older QA device was removed. The new device remains unverified.');
+        }
         possibleRecord = false;
-        console.log('PASS: synthetic record removed and no longer visible');
       }
     }
   }
