@@ -31,9 +31,13 @@ const ui = text => page.getByLabel(text, exact).or(page.getByText(text, exact)).
 const button = name => page.getByRole('button', { name, exact: true }).filter({ visible: true });
 const deviceRows = () => ui(/^Device-ID:\s*\S+/i);
 const knownDevices = new Set([
-  'qa-10c6b569-bd3', 'qa-5ff37d37-ea8', 'qa-836aa8f3-ade', 'qa-a6e3cf5b-1a4', 'qa-3166639d-810', 'qa-043cadfe-fa2', 'qa-dff2ec67-886', runId,
+  'qa-10c6b569-bd3', 'qa-5ff37d37-ea8', 'qa-836aa8f3-ade', 'qa-a6e3cf5b-1a4', 'qa-3166639d-810', 'qa-043cadfe-fa2', 'qa-dff2ec67-886', 'qa-2fa63868-3d9',
+  'qa-5b773731-ac3', 'qa-b90b3518-f49', 'qa-4977a3bd-fdc', 'qa-b5fee895-eb5', runId,
+  ...(process.env.QA_OPTISPEC_PENDING ?? '').split(',').filter(id => /^qa-[0-9a-f]{8}-[0-9a-f]{3}$/.test(id)),
 ]);
 let selectedDeviceId;
+let optispecAdded;
+let optispecRemoved;
 let removalStarted = false;
 const row = () => appName === 'optispec'
   ? ui(new RegExp('^Device-ID:\\s*' + (selectedDeviceId ?? runId) + '(?=\\s|$)', 'i'))
@@ -253,6 +257,7 @@ async function addRecord() {
     possibleRecord = true;
     const submit = button('Add Device');
     await clickDashboardAction(() => clickControl(submit), 'Add');
+    optispecAdded = runId;
     await submit.waitFor({ state: 'hidden' });
   }
   stage = 'verify synthetic record on dashboard';
@@ -264,15 +269,24 @@ async function addRecord() {
       selectedDeviceId = runId;
     } else {
       await deviceRows().first().waitFor();
-      for (const device of await deviceRows().all()) {
-        const label = await device.evaluate(element => element.getAttribute('aria-label') || element.textContent);
-        const id = /^Device-ID:\s*(qa-[0-9a-f]{8}-[0-9a-f]{3})(?=\s|$)/i.exec(label?.trim() ?? '')?.[1];
-        const hasSyntheticGroup = id && await ui(
-          new RegExp('^Device-Group:\\s*' + id + '-group(?=\\s|$)', 'i'),
-        ).first().isVisible();
-        if (knownDevices.has(id) || hasSyntheticGroup) {
-          selectedDeviceId = id;
-          break;
+      for (let pageIndex = 0; pageIndex < 5 && !selectedDeviceId; pageIndex++) {
+        for (const device of await deviceRows().all()) {
+          const label = await device.evaluate(element => element.getAttribute('aria-label') || element.textContent);
+          const id = /^Device-ID:\s*(qa-[0-9a-f]{8}-[0-9a-f]{3})(?=\s|$)/i.exec(label?.trim() ?? '')?.[1];
+          const hasSyntheticGroup = id && await ui(
+            new RegExp('^Device-Group:\\s*' + id + '-group(?=\\s|$)', 'i'),
+          ).first().isVisible();
+          if (knownDevices.has(id) || hasSyntheticGroup) {
+            selectedDeviceId = id;
+            break;
+          }
+        }
+        if (!selectedDeviceId && pageIndex < 4) {
+          // Flutter only exposes rows within or near the visible scroll area.
+          await page.mouse.move(620, 450);
+          await page.mouse.wheel(0, 500);
+          await page.evaluate(() => new Promise(resolve =>
+            requestAnimationFrame(() => requestAnimationFrame(resolve))));
         }
       }
     }
@@ -423,6 +437,7 @@ async function removeRecord() {
 
   stage = 'press the dialog Remove button';
   await clickDashboardAction(() => clickControl(candidates[0]), 'Remove');
+  if (appName === 'optispec') optispecRemoved = selectedDeviceId ?? runId;
   return true;
 }
 
@@ -495,6 +510,12 @@ try {
 } finally {
   if (process.env.GITHUB_OUTPUT && dashboardWindows.length) {
     await appendFile(process.env.GITHUB_OUTPUT, 'dashboard_windows=' + JSON.stringify(dashboardWindows) + '\n');
+  }
+  if (process.env.GITHUB_OUTPUT && optispecAdded) {
+    await appendFile(process.env.GITHUB_OUTPUT, 'optispec_added=' + optispecAdded + '\n');
+  }
+  if (process.env.GITHUB_OUTPUT && optispecRemoved) {
+    await appendFile(process.env.GITHUB_OUTPUT, 'optispec_removed=' + optispecRemoved + '\n');
   }
   await browser.close();
 }

@@ -8,6 +8,10 @@ on:
         description: Keep queuing the full cycle until the workflow is disabled
         type: boolean
         default: false
+      optispec_pending:
+        description: Synthetic device IDs carried from the previous cycle
+        type: string
+        required: false
       pdf_only:
         description: Check the PDF download without creating a record
         type: boolean
@@ -57,6 +61,8 @@ jobs:
     outputs:
       entryflow_windows: ${{ steps.entryflow.outputs.dashboard_windows }}
       optispec_windows: ${{ steps.optispec.outputs.dashboard_windows }}
+      optispec_added: ${{ steps.optispec.outputs.optispec_added }}
+      optispec_removed: ${{ steps.optispec.outputs.optispec_removed }}
     strategy:
       fail-fast: false
       matrix:
@@ -104,6 +110,7 @@ jobs:
         env:
           MSUO_QA_EMAIL: ${{ secrets.OPTISPEC_QA_EMAIL }}
           MSUO_QA_PASSWORD: ${{ secrets.OPTISPEC_QA_PASSWORD }}
+          QA_OPTISPEC_PENDING: ${{ inputs.optispec_pending }}
           PUSH_MESSAGE: ${{ github.event_name == 'push' && github.event.head_commit.message || '' }}
           QA_PDF_ONLY: ${{ (github.event_name == 'push' && github.event.head_commit.message != 'Verify synthetic add and remove through the dashboard' && github.event.head_commit.message != 'Start continuous Browser QA' && github.event.head_commit.message != 'Verify OptiSpec device removal end to end') || inputs.pdf_only }}
         run: |
@@ -155,6 +162,9 @@ jobs:
       - name: Dispatch once at five minutes or when the tests finish
         env:
           GH_TOKEN: ${{ github.token }}
+          OPTISPEC_PENDING: ${{ inputs.optispec_pending }}
+          OPTISPEC_ADDED: ${{ needs.smoke.outputs.optispec_added }}
+          OPTISPEC_REMOVED: ${{ needs.confirm.result == 'success' && needs.smoke.outputs.optispec_removed || '' }}
         run: |
           started=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --jq '.run_started_at')
           remaining=$(( $(date -d "$started" +%s) + 300 - $(date +%s) ))
@@ -167,5 +177,8 @@ jobs:
             exit 0
           fi
 
-          gh api --method POST "repos/$GITHUB_REPOSITORY/actions/workflows/browser-qa.yml/dispatches" -f ref=main -F 'inputs[continuous]=true'
+          pending=$(jq -nr --arg current "$OPTISPEC_PENDING" --arg added "$OPTISPEC_ADDED" --arg removed "$OPTISPEC_REMOVED" '
+            ([$added] + ($current | split(","))) | map(select(test("^qa-[0-9a-f]{8}-[0-9a-f]{3}$") and . != $removed)) |
+            reduce .[] as $id ([]; if index($id) then . else . + [$id] end) | .[:20] | join(",")')
+          gh api --method POST "repos/$GITHUB_REPOSITORY/actions/workflows/browser-qa.yml/dispatches" -f ref=main -F 'inputs[continuous]=true' -f "inputs[optispec_pending]=$pending"
           echo 'Queued the next continuous Browser QA cycle.'
