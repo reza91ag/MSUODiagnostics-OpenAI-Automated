@@ -1,8 +1,13 @@
 name: Browser QA
+run-name: ${{ inputs.continuous && 'Browser QA continuous' || 'Browser QA' }}
 
 on:
   workflow_dispatch:
     inputs:
+      continuous:
+        description: Keep queuing the full cycle until the workflow is disabled
+        type: boolean
+        default: false
       pdf_only:
         description: Check the PDF download without creating a record
         type: boolean
@@ -17,13 +22,35 @@ on:
       - '.github/workflows/browser-qa.yml'
       - 'browser-qa/**'
   schedule:
-    - cron: '2-57/5 * * * *'
+    - cron: '2,7,12,17,22,27,32,37,42,47,52,57 * * * *'
 
 permissions:
   contents: read
 
 jobs:
+  plan:
+    name: Check whether a continuous run is already active
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      actions: read
+    outputs:
+      start: ${{ steps.guard.outputs.start }}
+    steps:
+      - id: guard
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          active=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/browser-qa.yml/runs?event=workflow_dispatch&per_page=20" --jq '
+            [.workflow_runs[] | select(.display_title == "Browser QA continuous" and .status != "completed")] | length')
+          if [[ "$active" == 0 ]]; then
+            echo 'start=true' >> "$GITHUB_OUTPUT"
+          fi
+
   smoke:
+    needs: plan
+    if: always() && !cancelled() && (github.event_name != 'schedule' || needs.plan.outputs.start == 'true')
     name: ${{ matrix.app }} smoke test
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -52,7 +79,7 @@ jobs:
         env:
           MSUO_QA_EMAIL: ${{ secrets.ENTRYFLOW_QA_EMAIL }}
           MSUO_QA_PASSWORD: ${{ secrets.ENTRYFLOW_QA_PASSWORD }}
-          QA_PDF_ONLY: ${{ (github.event_name == 'push' && github.event.head_commit.message != 'Verify synthetic add and remove through the dashboard' && github.event.head_commit.message != 'Verify OptiSpec device removal end to end') || inputs.pdf_only }}
+          QA_PDF_ONLY: ${{ (github.event_name == 'push' && github.event.head_commit.message != 'Verify synthetic add and remove through the dashboard' && github.event.head_commit.message != 'Start continuous Browser QA' && github.event.head_commit.message != 'Verify OptiSpec device removal end to end') || inputs.pdf_only }}
           RECOVERY_INPUT: ${{ inputs.recover_entry_id }}
           PUSH_MESSAGE: ${{ github.event_name == 'push' && github.event.head_commit.message || '' }}
         run: |
@@ -78,7 +105,7 @@ jobs:
           MSUO_QA_EMAIL: ${{ secrets.OPTISPEC_QA_EMAIL }}
           MSUO_QA_PASSWORD: ${{ secrets.OPTISPEC_QA_PASSWORD }}
           PUSH_MESSAGE: ${{ github.event_name == 'push' && github.event.head_commit.message || '' }}
-          QA_PDF_ONLY: ${{ (github.event_name == 'push' && github.event.head_commit.message != 'Verify synthetic add and remove through the dashboard' && github.event.head_commit.message != 'Verify OptiSpec device removal end to end') || inputs.pdf_only }}
+          QA_PDF_ONLY: ${{ (github.event_name == 'push' && github.event.head_commit.message != 'Verify synthetic add and remove through the dashboard' && github.event.head_commit.message != 'Start continuous Browser QA' && github.event.head_commit.message != 'Verify OptiSpec device removal end to end') || inputs.pdf_only }}
         run: |
           missing=()
           [[ -n "$MSUO_QA_EMAIL" ]] || missing+=("OPTISPEC_QA_EMAIL")
@@ -108,3 +135,37 @@ jobs:
           ENTRYFLOW_WINDOWS: ${{ needs.smoke.outputs.entryflow_windows }}
           OPTISPEC_WINDOWS: ${{ needs.smoke.outputs.optispec_windows }}
         run: py -3 browser-qa/confirm_dashboard_updates.py
+
+  queue-next:
+    name: Queue the next continuous cycle
+    needs: [plan, smoke, confirm]
+    if: >-
+      always() && !cancelled() &&
+      ((github.event_name == 'workflow_dispatch' && inputs.continuous && !inputs.pdf_only && !inputs.recover_entry_id) ||
+       (github.event_name == 'schedule' && needs.plan.outputs.start == 'true') ||
+       (github.event_name == 'push' && github.event.head_commit.message == 'Start continuous Browser QA'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      actions: write
+    concurrency:
+      group: browser-qa-next-cycle
+      cancel-in-progress: false
+    steps:
+      - name: Dispatch once at five minutes or when the tests finish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          started=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --jq '.run_started_at')
+          remaining=$(( $(date -d "$started" +%s) + 300 - $(date +%s) ))
+          if (( remaining > 0 )); then sleep "$remaining"; fi
+
+          # Ignore this run when checking for another queued or active successor.
+          active=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/browser-qa.yml/runs?event=workflow_dispatch&per_page=20" --jq "[.workflow_runs[] | select(.id != $GITHUB_RUN_ID and .display_title == \"Browser QA continuous\" and .status != \"completed\")] | length")
+          if [[ "$active" != 0 ]]; then
+            echo 'A continuous cycle is already queued or running.'
+            exit 0
+          fi
+
+          gh api --method POST "repos/$GITHUB_REPOSITORY/actions/workflows/browser-qa.yml/dispatches" -f ref=main -F 'inputs[continuous]=true'
+          echo 'Queued the next continuous Browser QA cycle.'
