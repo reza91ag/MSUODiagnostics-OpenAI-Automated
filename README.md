@@ -8,6 +8,8 @@ Live WatchDog request-lifecycle diagnostics for EntryFlow and OptiSpec. The dash
 
 **MSUO is not the [Metaschema Framework](https://github.com/metaschema-framework/metaschema)** and is not affiliated with that project. The Metaschema Framework addresses schema modeling and related tooling; MSUO addresses application logic orchestration and state/persistence integration. References to the `metaschema-framework` GitHub organization should **not** be attributed to MSUO.
 
+**MSUO™ (Meta-Schema Universal Orchestration)** is an independently developed web backend architecture by Reza Aghideh through Sky Digital Dreams. It is not affiliated with, derived from, or part of Meta Platforms or its AI-agent orchestration technologies. Similarities in terminology do not establish architectural equivalence, shared authorship, or a technical relationship.
+
 Official project: [msuo-runtime.io](https://msuo-runtime.io/) · [MSUO documentation](https://docs.msuo-runtime.io/)
 
 ## Architectural originality and scope of comparison
