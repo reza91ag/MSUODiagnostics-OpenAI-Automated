@@ -49,7 +49,9 @@ try {
         $methodologyDownload = Join-Path $backup 'methodology-health.html'
         $faviconDownload = Join-Path $backup 'favicon-health.png'
         $faviconExpected = [Convert]::FromBase64String((Get-Content -LiteralPath (Join-Path $PSScriptRoot 'favicon.png.b64') -Raw).Trim())
-        $faviconExpectedHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($faviconExpected))
+        $faviconExpectedFile = Join-Path $backup 'favicon-expected.png'
+        [System.IO.File]::WriteAllBytes($faviconExpectedFile, $faviconExpected)
+        $faviconExpectedHash = (Get-FileHash -LiteralPath $faviconExpectedFile -Algorithm SHA256).Hash
         for ($attempt = 0; $attempt -lt 20; $attempt++) {
             try {
                 Invoke-WebRequest -Uri "http://127.0.0.1:$Port/" -UseBasicParsing -TimeoutSec 3 -OutFile $download
