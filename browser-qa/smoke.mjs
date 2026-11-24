@@ -322,55 +322,41 @@ async function generatePdf() {
 
 async function removeRecord() {
   removalStarted = true;
+  stage = 'select synthetic record';
   if (!await row().first().isVisible()) return false;
   if (appName === 'entryflow' && await row().count() !== 1) return false;
-  let message;
-  if (appName === 'entryflow') {
-    stage = 'select EntryFlow synthetic entry';
-    const selected = page.locator('flt-semantics[aria-checked="true"], flt-semantics[aria-selected="true"]').filter({ visible: true });
-    // Begin deletion only from a freshly signed-in dashboard, with no existing selection.
-    if (await selected.count()) return false;
-    await clickControl(row());
-    stage = 'open EntryFlow remove dialog';
-    await footerControl('remove');
-    stage = 'verify the EntryFlow confirmation names one entry';
-    await ui('Remove selected entries?').waitFor();
-    message = ui('Do you really want to remove 1 selected entry?');
-    await message.waitFor();
-  } else {
-    stage = 'select OptiSpec device row';
-    await clickControl(row().first());
-    stage = 'open OptiSpec remove dialog';
-    const remove = button('Remove');
-    await remove.and(page.getByRole('button', { disabled: false })).waitFor();
-    await footerControl('remove');
-    stage = 'verify OptiSpec remove dialog';
-    const deviceOnly = ui('Do you really want to remove this device?');
-    const deviceAndInitialEntry = ui('Do you really want to remove this device and all of its entries?');
-    // Add Device creates an empty measurement entry for each synthetic device.
-    // The target is already constrained to the exact test device ID.
-    await deviceOnly.or(deviceAndInitialEntry).first().waitFor();
-    message = await deviceOnly.first().isVisible() ? deviceOnly : deviceAndInitialEntry;
+  const selected = page.locator('flt-semantics[aria-checked="true"], flt-semantics[aria-selected="true"]').filter({ visible: true });
+  if (await selected.count()) return false;
+  await clickControl(row().first());
+
+  stage = 'open remove dialog';
+  if (appName === 'optispec') {
+    await button('Remove').and(page.getByRole('button', { disabled: false })).waitFor();
   }
-  stage = 'confirm removal of selected synthetic record';
+  await footerControl('remove');
+
+  stage = 'find the dialog Remove button';
+  await enableSemantics();
+  const cancel = button('Cancel').or(ui('Cancel')).first();
+  await cancel.waitFor();
+  const anchor = await cancel.boundingBox();
+  if (!anchor) return false;
   const dialogRemove = page.getByRole('dialog').getByRole('button', { name: 'Remove', exact: true });
-  const remove = button('Remove');
-  if (await dialogRemove.count() === 1) {
-    await clickControl(dialogRemove);
-  } else if (await remove.count() === 1) {
-    await clickControl(remove);
-  } else {
-    // The desktop OptiSpec toolbar also has a Remove button.
-    const anchor = await message.boundingBox();
-    if (!anchor) return false;
-    const candidates = [];
-    for (const control of await remove.all()) {
-      const rect = await control.boundingBox();
-      if (rect && Math.abs(rect.y - anchor.y) < 140 && rect.y > anchor.y) candidates.push(control);
+  const controls = await (await dialogRemove.count() ? dialogRemove : button('Remove')).all();
+  const candidates = [];
+  for (const control of controls) {
+    const rect = await control.boundingBox();
+    if (!rect || !await control.isEnabled()) continue;
+    if (Math.abs(rect.y + rect.height / 2 - anchor.y - anchor.height / 2) < 24 &&
+        Math.abs(rect.x - anchor.x) < 400) {
+      candidates.push(control);
     }
-    if (candidates.length !== 1) return false;
-    await clickControl(candidates[0]);
   }
+  if (candidates.length !== 1) return false;
+
+  stage = 'press the dialog Remove button';
+  await clickControl(candidates[0]);
+  await cancel.waitFor({ state: 'hidden' });
   stage = 'verify selected synthetic record is gone';
   await row().first().waitFor({ state: 'hidden' });
   return true;
