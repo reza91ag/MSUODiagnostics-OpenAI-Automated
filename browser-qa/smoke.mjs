@@ -31,7 +31,7 @@ const ui = text => page.getByLabel(text, exact).or(page.getByText(text, exact)).
 const button = name => page.getByRole('button', { name, exact: true }).filter({ visible: true });
 const deviceRows = () => ui(/^Device-ID:\s*\S+/i);
 const knownDevices = new Set([
-  'qa-10c6b569-bd3', 'qa-5ff37d37-ea8', 'qa-836aa8f3-ade', 'qa-a6e3cf5b-1a4', 'qa-3166639d-810', 'qa-043cadfe-fa2', runId,
+  'qa-10c6b569-bd3', 'qa-5ff37d37-ea8', 'qa-836aa8f3-ade', 'qa-a6e3cf5b-1a4', 'qa-3166639d-810', 'qa-043cadfe-fa2', 'qa-dff2ec67-886', runId,
 ]);
 let selectedDeviceId;
 let removalStarted = false;
@@ -267,7 +267,10 @@ async function addRecord() {
       for (const device of await deviceRows().all()) {
         const label = await device.evaluate(element => element.getAttribute('aria-label') || element.textContent);
         const id = /^Device-ID:\s*(qa-[0-9a-f]{8}-[0-9a-f]{3})(?=\s|$)/i.exec(label?.trim() ?? '')?.[1];
-        if (knownDevices.has(id)) {
+        const hasSyntheticGroup = id && await ui(
+          new RegExp('^Device-Group:\\s*' + id + '-group(?=\\s|$)', 'i'),
+        ).first().isVisible();
+        if (knownDevices.has(id) || hasSyntheticGroup) {
           selectedDeviceId = id;
           break;
         }
