@@ -324,14 +324,19 @@ async function removeRecord() {
   removalStarted = true;
   if (!await row().first().isVisible()) return false;
   if (appName === 'entryflow' && await row().count() !== 1) return false;
+  let message;
   if (appName === 'entryflow') {
+    stage = 'select EntryFlow synthetic entry';
     const selected = page.locator('flt-semantics[aria-checked="true"], flt-semantics[aria-selected="true"]').filter({ visible: true });
     // Begin deletion only from a freshly signed-in dashboard, with no existing selection.
     if (await selected.count()) return false;
     await clickControl(row());
+    stage = 'open EntryFlow remove dialog';
     await footerControl('remove');
+    stage = 'verify the EntryFlow confirmation names one entry';
     await ui('Remove selected entries?').waitFor();
-    await ui(/^Do you really want to remove 1 selected entry\?$/i).waitFor();
+    message = ui('Do you really want to remove 1 selected entry?');
+    await message.waitFor();
   } else {
     stage = 'select OptiSpec device row';
     await clickControl(row().first());
@@ -340,8 +345,12 @@ async function removeRecord() {
     await remove.and(page.getByRole('button', { disabled: false })).waitFor();
     await footerControl('remove');
     stage = 'verify OptiSpec remove dialog';
-    await ui('Remove device?').waitFor();
-    await ui('Do you really want to remove this device?').waitFor();
+    const deviceOnly = ui('Do you really want to remove this device?');
+    const deviceAndInitialEntry = ui('Do you really want to remove this device and all of its entries?');
+    // Add Device creates an empty measurement entry for each synthetic device.
+    // The target is already constrained to the exact test device ID.
+    await deviceOnly.or(deviceAndInitialEntry).first().waitFor();
+    message = await deviceOnly.first().isVisible() ? deviceOnly : deviceAndInitialEntry;
   }
   stage = 'confirm removal of selected synthetic record';
   const dialogRemove = page.getByRole('dialog').getByRole('button', { name: 'Remove', exact: true });
@@ -352,7 +361,6 @@ async function removeRecord() {
     await clickControl(remove);
   } else {
     // The desktop OptiSpec toolbar also has a Remove button.
-    const message = ui('Do you really want to remove this device?');
     const anchor = await message.boundingBox();
     if (!anchor) return false;
     const candidates = [];
