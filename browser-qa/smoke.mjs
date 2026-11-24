@@ -378,20 +378,13 @@ async function removeRecord() {
     }
 
     stage = 'click the EntryFlow minus button';
-    try {
-      await clickDashboardAction(() => footerControl('remove'), 'Remove');
-      return true;
-    } catch (error) {
-      const cancel = button('Cancel').or(ui('Cancel')).first();
-      console.log('After EntryFlow minus: modal Cancel control visible=' + await cancel.isVisible());
-      throw error;
-    }
+    await footerControl('remove');
+  } else {
+    await clickControl(row().first());
+    stage = 'open OptiSpec remove dialog';
+    await button('Remove').and(page.getByRole('button', { disabled: false })).waitFor();
+    await footerControl('remove');
   }
-
-  await clickControl(row().first());
-  stage = 'open OptiSpec remove dialog';
-  await button('Remove').and(page.getByRole('button', { disabled: false })).waitFor();
-  await footerControl('remove');
 
   stage = 'find the dialog Remove button';
   await enableSemantics();
