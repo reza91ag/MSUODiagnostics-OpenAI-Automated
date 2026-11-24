@@ -30,13 +30,13 @@ const ui = text => page.getByLabel(text, exact).or(page.getByText(text, exact)).
 const button = name => page.getByRole('button', { name, exact: true }).filter({ visible: true });
 const deviceRows = () => ui(/^Device-ID:\s*\S+/i);
 const knownDevices = new Set([
-  'qa-10c6b569-bd3', 'qa-5ff37d37-ea8', 'qa-836aa8f3-ade', 'qa-a6e3cf5b-1a4', runId,
+  'qa-10c6b569-bd3', 'qa-5ff37d37-ea8', 'qa-836aa8f3-ade', 'qa-a6e3cf5b-1a4', 'qa-3166639d-810', runId,
 ]);
 let selectedDeviceId;
 let removalStarted = false;
 const row = () => appName === 'optispec'
   ? ui(new RegExp('^Device-ID:\\s*' + (selectedDeviceId ?? runId) + '(?=\\s|$)', 'i'))
-  : ui(runId);
+  : ui(new RegExp('^(?:Holder:\\s*)?' + runId + '(?=\\s|$)', 'i'));
 const signOutControl = () => {
   const name = /^sign\s*out$/i;
   return page.getByRole('button', { name })
