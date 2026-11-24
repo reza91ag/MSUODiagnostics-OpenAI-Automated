@@ -10,7 +10,7 @@ $python = (& py -3 -c "import sys; print(sys.executable)").Trim()
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $python)) {
     throw 'Python 3 is required on the Windows runner.'
 }
-$files = @('serve.py', 'index.html', 'methodology.html', 'figure-1.webp', 'figure-2.webp', 'figure-3.webp')
+$files = @('serve.py', 'index.html', 'methodology.html', 'figure-1.webp', 'figure-2.webp', 'figure-3.webp', 'favicon.png.b64')
 foreach ($file in $files) {
     if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot $file) -PathType Leaf)) {
         throw "Missing homepage source: $file"
@@ -47,13 +47,18 @@ try {
         $methodologyExpected = (Get-FileHash -LiteralPath (Join-Path $PSScriptRoot 'methodology.html') -Algorithm SHA256).Hash
         $download = Join-Path $backup 'health.html'
         $methodologyDownload = Join-Path $backup 'methodology-health.html'
+        $faviconDownload = Join-Path $backup 'favicon-health.png'
+        $faviconExpected = [Convert]::FromBase64String((Get-Content -LiteralPath (Join-Path $PSScriptRoot 'favicon.png.b64') -Raw).Trim())
+        $faviconExpectedHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($faviconExpected))
         for ($attempt = 0; $attempt -lt 20; $attempt++) {
             try {
                 Invoke-WebRequest -Uri "http://127.0.0.1:$Port/" -UseBasicParsing -TimeoutSec 3 -OutFile $download
                 Invoke-WebRequest -Uri "http://127.0.0.1:$Port/methodology/" -UseBasicParsing -TimeoutSec 3 -OutFile $methodologyDownload
+                Invoke-WebRequest -Uri "http://127.0.0.1:$Port/favicon.png" -UseBasicParsing -TimeoutSec 3 -OutFile $faviconDownload
                 $homepageOK = (Get-FileHash -LiteralPath $download -Algorithm SHA256).Hash -eq $expected
                 $methodologyOK = (Get-FileHash -LiteralPath $methodologyDownload -Algorithm SHA256).Hash -eq $methodologyExpected
-                if ($homepageOK -and $methodologyOK) {
+                $faviconOK = (Get-FileHash -LiteralPath $faviconDownload -Algorithm SHA256).Hash -eq $faviconExpectedHash
+                if ($homepageOK -and $methodologyOK -and $faviconOK) {
                     Write-Host "Homepage verified at http://127.0.0.1:$Port/ (SHA256 $expected)"
                     return
                 }
