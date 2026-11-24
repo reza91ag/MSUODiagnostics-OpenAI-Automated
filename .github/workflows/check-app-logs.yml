@@ -1,0 +1,44 @@
+name: Check app log evidence
+
+on:
+  workflow_dispatch:
+    inputs:
+      timestamp:
+        description: UTC time of the browser removal attempt
+        default: '2026-11-24T01:01:38Z'
+        type: string
+        required: true
+      entry_id:
+        description: Synthetic EntryFlow record ID
+        default: 'qa-4702ac2d-f18'
+        type: string
+        required: true
+      device_id:
+        description: Synthetic OptiSpec device ID
+        default: 'qa-3166639d-810'
+        type: string
+        required: true
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/check-app-logs.yml'
+      - 'browser-qa/check_app_logs.py'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: [self-hosted, windows]
+    environment: production
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read original app logs and summarize evidence
+        shell: powershell
+        env:
+          MSUO_DEPLOY_DIR: ${{ vars.MSUO_DEPLOY_DIR }}
+          QA_CENTER: ${{ inputs.timestamp || '2026-11-24T01:01:38Z' }}
+          QA_ENTRY_ID: ${{ inputs.entry_id || 'qa-4702ac2d-f18' }}
+          QA_DEVICE_ID: ${{ inputs.device_id || 'qa-3166639d-810' }}
+        run: py -3 browser-qa/check_app_logs.py --center "$env:QA_CENTER" --entry-id "$env:QA_ENTRY_ID" --device-id "$env:QA_DEVICE_ID"
