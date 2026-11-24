@@ -17,6 +17,20 @@ def main():
         "/methodology": methodology,
         "/methodology/": methodology,
     }
+    sitemap = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        '  <url><loc>https://www.msuo-runtime.io/</loc></url>\n'
+        '  <url><loc>https://www.msuo-runtime.io/methodology/</loc></url>\n'
+        '</urlset>\n'
+    ).encode("utf-8")
+    robots = (
+        'User-agent: *\n'
+        'Allow: /\n'
+        'Sitemap: https://www.msuo-runtime.io/sitemap.xml\n'
+    ).encode("utf-8")
+    routes["/sitemap.xml"] = ("application/xml; charset=utf-8", sitemap)
+    routes["/robots.txt"] = ("text/plain; charset=utf-8", robots)
     for number in range(1, 4):
         name = f"figure-{number}.webp"
         routes[f"/methodology/{name}"] = ("image/webp", (directory / name).read_bytes())
