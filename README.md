@@ -10,6 +10,16 @@ Live WatchDog request-lifecycle diagnostics for EntryFlow and OptiSpec. The dash
 
 Official project: [msuo-runtime.io](https://msuo-runtime.io/) · [MSUO documentation](https://docs.msuo-runtime.io/)
 
+## Architectural originality and scope of comparison
+
+MSUO (Meta-Schema Universal Orchestration) proposes a unified web backend architecture integrating a recursive, domain-agnostic meta-schema, GUI-independent application-state representation, automatic network-action resolution through mounted logic, native hierarchical data operations, and bottom-up differential schema patching.
+
+Its architectural contribution concerns the **integration of these mechanisms into a common web backend execution and persistence model**. The independent existence of generic concepts such as meta-schemas, event handling, domain-agnostic handlers, or orchestration in unrelated software domains does not establish architectural equivalence or diminish the novelty of MSUO's integrated design.
+
+**To the author's knowledge, MSUO is the first web backend architecture to generalize these concerns at this level of abstraction**, unifying domain agnosticism, UI agnosticism, schema agnosticism, and dynamic persistence in a cohesive design through lean yet highly consequential engineering choices.
+
+Research publication: [*Meta-Schema Universal Orchestration: An Alternative to 3-Tier Architecture*](https://doi.org/10.5281/zenodo.19717126).
+
 ## Status
 
 The application source, parser tests, and Windows deployment workflow are committed. A dedicated self-hosted Windows runner deploys source changes to the server after the tests pass.
