@@ -181,7 +181,7 @@ async function footerControl(kind) {
   await page.mouse.click(x + width / 2, y + height / 2);
 }
 
-async function clickDashboardAction(control, command) {
+async function clickDashboardAction(click, command) {
   const ingress = 'https://' + appName + '-api.msuo-runtime.io/ingress';
   const commandPattern = new RegExp('"Command"\\s*:\\s*"' + command + '"', 'i');
   let sentAt;
@@ -197,7 +197,7 @@ async function clickDashboardAction(control, command) {
   try {
     const pendingResponse = page.waitForResponse(response =>
       request && response.request() === request, { timeout }).catch(() => null);
-    await clickControl(control);
+    await click();
     const response = await pendingResponse;
     if (!sentAt) throw new Error('No dashboard action was submitted.');
     dashboardWindows.push({ command, sentAt, endAt: new Date().toISOString() });
@@ -227,7 +227,7 @@ async function addRecord() {
     stage = 'submit EntryFlow synthetic record';
     possibleRecord = true;
     const submit = button('Confirm');
-    await clickDashboardAction(submit, 'Add');
+    await clickDashboardAction(() => clickControl(submit), 'Add');
     stage = 'wait for EntryFlow entry form to close';
     try {
       await authField('Name').waitFor({ state: 'hidden' });
@@ -250,7 +250,7 @@ async function addRecord() {
     stage = 'submit OptiSpec synthetic record';
     possibleRecord = true;
     const submit = button('Add Device');
-    await clickDashboardAction(submit, 'Add');
+    await clickDashboardAction(() => clickControl(submit), 'Add');
     await submit.waitFor({ state: 'hidden' });
   }
   stage = 'verify synthetic record on dashboard';
@@ -356,10 +356,20 @@ async function removeRecord() {
   if (await selected.count()) return false;
   await clickControl(row().first());
 
-  stage = 'open remove dialog';
-  if (appName === 'optispec') {
-    await button('Remove').and(page.getByRole('button', { disabled: false })).waitFor();
+  if (appName === 'entryflow') {
+    stage = 'click the EntryFlow minus button';
+    try {
+      await clickDashboardAction(() => footerControl('remove'), 'Remove');
+      return true;
+    } catch (error) {
+      const cancel = button('Cancel').or(ui('Cancel')).first();
+      console.log('After EntryFlow minus: modal Cancel control visible=' + await cancel.isVisible());
+      throw error;
+    }
   }
+
+  stage = 'open OptiSpec remove dialog';
+  await button('Remove').and(page.getByRole('button', { disabled: false })).waitFor();
   await footerControl('remove');
 
   stage = 'find the dialog Remove button';
@@ -382,7 +392,7 @@ async function removeRecord() {
   if (candidates.length !== 1) return false;
 
   stage = 'press the dialog Remove button';
-  await clickDashboardAction(candidates[0], 'Remove');
+  await clickDashboardAction(() => clickControl(candidates[0]), 'Remove');
   return true;
 }
 
