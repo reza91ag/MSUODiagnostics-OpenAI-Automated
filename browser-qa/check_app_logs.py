@@ -33,6 +33,8 @@ def main():
         lifecycle_count = 0
         matching_id = 0
         matching_removal = 0
+        completed_removals = 0
+        operations = {}
         opened = 0
         for path in files:
             try:
@@ -48,15 +50,21 @@ def main():
                 if not timestamp or abs(timestamp - center) > window:
                     continue
                 lifecycle_count += 1
-                marker = re.search(r"(?<![\w-])" + re.escape(identifier) + r"(?![\w-])", block)
-                if marker:
+                operation = re.search(r"Metadata\s+(SignIn|UpdateDashboard|RemoveDevice|RemoveEntry)\s+Staged",
+                                      block, re.IGNORECASE)
+                if operation:
+                    key = operation.group(1)
+                    operations[key] = operations.get(key, 0) + 1
+                removal = re.search(r"\b(?:removing|deleting|removal|delete)\b", block, re.IGNORECASE)
+                success = re.search(r"CRUD Operation succe[s]+fully completed", block, re.IGNORECASE)
+                if removal and success:
+                    completed_removals += 1
+                if re.search(r"(?<![\w-])" + re.escape(identifier) + r"(?![\w-])", block):
                     matching_id += 1
-                    if re.search(r"\b(?:remov\w*|delet\w*)\b", block, re.IGNORECASE) and re.search(
-                        r"CRUD Operation succe[s]+fully completed", block, re.IGNORECASE
-                    ):
-                        matching_removal += 1
+                    matching_removal += int(bool(removal and success))
         print(f"{app}: readable app logs={opened}, completed lifecycles in time window={lifecycle_count}, "
-              f"lifecycles naming the test ID={matching_id}, ID-matched successful removal logs={matching_removal}")
+              f"removal success signals={completed_removals}, lifecycles naming the test ID={matching_id}, "
+              f"ID-matched successful removal logs={matching_removal}, operations={json.dumps(operations)}")
 
 
 if __name__ == "__main__":
