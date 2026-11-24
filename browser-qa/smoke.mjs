@@ -354,9 +354,29 @@ async function removeRecord() {
   if (appName === 'entryflow' && await row().count() !== 1) return false;
   const selected = page.locator('flt-semantics[aria-checked="true"], flt-semantics[aria-selected="true"]').filter({ visible: true });
   if (await selected.count()) return false;
-  await clickControl(row().first());
-
   if (appName === 'entryflow') {
+    const entry = ui(runId);
+    if (await entry.count() === 1) {
+      await clickControl(entry);
+    } else {
+      const holder = row().first();
+      const box = await holder.boundingBox();
+      const width = page.viewportSize()?.width;
+      if (!box || width !== 1365) return false;
+
+      // In the desktop table, each Holder strip is followed by its column
+      // headings and first entry. Limit the coordinate click to this QA group.
+      const y = box.y + box.height / 2 + 100;
+      const holders = await ui(/^Holder:/i).all();
+      for (const other of holders) {
+        const bounds = await other.boundingBox();
+        if (bounds && bounds.y > box.y + 14 && bounds.y < y + 20) return false;
+      }
+      if (y > page.viewportSize().height - 115) return false;
+      await page.mouse.click(box.x + box.width / 2, y);
+      console.log('Clicked the entry beneath the exact synthetic Holder heading.');
+    }
+
     stage = 'click the EntryFlow minus button';
     try {
       await clickDashboardAction(() => footerControl('remove'), 'Remove');
@@ -368,6 +388,7 @@ async function removeRecord() {
     }
   }
 
+  await clickControl(row().first());
   stage = 'open OptiSpec remove dialog';
   await button('Remove').and(page.getByRole('button', { disabled: false })).waitFor();
   await footerControl('remove');
