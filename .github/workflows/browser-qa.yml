@@ -69,12 +69,16 @@ jobs:
           if [[ "$PUSH_MESSAGE" =~ ^Recover\ EntryFlow\ QA\ (qa-[0-9a-f]{8}-[0-9a-f]{3})$ ]]; then
             export QA_RECOVERY_ENTRY_ID="${BASH_REMATCH[1]}"
           fi
+          if [[ "$PUSH_MESSAGE" =~ ^Recover\ QA\ records\ (qa-[0-9a-f]{8}-[0-9a-f]{3})\ (qa-[0-9a-f]{8}-[0-9a-f]{3})$ ]]; then
+            export QA_RECOVERY_ENTRY_ID="${BASH_REMATCH[1]}"
+          fi
           node smoke.mjs entryflow
       - name: Run OptiSpec smoke test
         if: matrix.app == 'optispec' && !inputs.recover_entry_id
         env:
           MSUO_QA_EMAIL: ${{ secrets.OPTISPEC_QA_EMAIL }}
           MSUO_QA_PASSWORD: ${{ secrets.OPTISPEC_QA_PASSWORD }}
+          PUSH_MESSAGE: ${{ github.event_name == 'push' && github.event.head_commit.message || '' }}
           QA_PDF_ONLY: ${{ (github.event_name == 'push' && github.event.head_commit.message != 'Verify synthetic add and remove through the dashboard') || inputs.pdf_only }}
         run: |
           missing=()
@@ -83,5 +87,8 @@ jobs:
           if (( ${#missing[@]} > 0 )); then
             echo "::error title=QA credentials unavailable::GitHub Actions did not supply ${missing[*]}"
             exit 1
+          fi
+          if [[ "$PUSH_MESSAGE" =~ ^Recover\ QA\ records\ (qa-[0-9a-f]{8}-[0-9a-f]{3})\ (qa-[0-9a-f]{8}-[0-9a-f]{3})$ ]]; then
+            export QA_RECOVERY_ENTRY_ID="${BASH_REMATCH[2]}"
           fi
           node smoke.mjs optispec

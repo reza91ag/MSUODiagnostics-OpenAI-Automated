@@ -14,8 +14,8 @@ if (!Object.hasOwn(apps, appName)) throw new Error('Select entryflow or optispec
 if (!startupOnly && (!email || !password)) throw new Error('Both QA secrets are required.');
 
 const recoveryId = process.env.QA_RECOVERY_ENTRY_ID;
-if (recoveryId && (appName !== 'entryflow' || !/^qa-[0-9a-f]{8}-[0-9a-f]{3}$/.test(recoveryId))) {
-  throw new Error('Recovery requires a synthetic EntryFlow record ID.');
+if (recoveryId && !/^qa-[0-9a-f]{8}-[0-9a-f]{3}$/.test(recoveryId)) {
+  throw new Error('Recovery requires a synthetic record ID.');
 }
 const runId = recoveryId || 'qa-' + randomUUID().slice(0, 12);
 const timeout = 25000;
@@ -33,6 +33,7 @@ const knownDevices = new Set([
   'qa-10c6b569-bd3', 'qa-5ff37d37-ea8', 'qa-836aa8f3-ade', 'qa-a6e3cf5b-1a4', runId,
 ]);
 let selectedDeviceId;
+let removalStarted = false;
 const row = () => appName === 'optispec'
   ? ui(new RegExp('^Device-ID:\\s*' + (selectedDeviceId ?? runId) + '(?=\\s|$)', 'i'))
   : ui(runId);
@@ -320,6 +321,7 @@ async function generatePdf() {
 }
 
 async function removeRecord() {
+  removalStarted = true;
   if (!await row().first().isVisible()) return false;
   if (appName === 'entryflow' && await row().count() !== 1) return false;
   if (appName === 'entryflow') {
@@ -331,11 +333,17 @@ async function removeRecord() {
     await ui('Remove selected entries?').waitFor();
     await ui(/^Do you really want to remove 1 selected entry\?$/i).waitFor();
   } else {
+    stage = 'select OptiSpec device row';
     await clickControl(row().first());
+    stage = 'open OptiSpec remove dialog';
+    const remove = button('Remove');
+    await remove.and(page.getByRole('button', { disabled: false })).waitFor();
     await footerControl('remove');
+    stage = 'verify OptiSpec remove dialog';
     await ui('Remove device?').waitFor();
     await ui('Do you really want to remove this device?').waitFor();
   }
+  stage = 'confirm removal of selected synthetic record';
   const dialogRemove = page.getByRole('dialog').getByRole('button', { name: 'Remove', exact: true });
   const remove = button('Remove');
   if (await dialogRemove.count() === 1) {
@@ -355,6 +363,7 @@ async function removeRecord() {
     if (candidates.length !== 1) return false;
     await clickControl(candidates[0]);
   }
+  stage = 'verify selected synthetic record is gone';
   await row().first().waitFor({ state: 'hidden' });
   return true;
 }
@@ -368,19 +377,19 @@ try {
     if (recoveryId) {
       stage = 'recover previous synthetic entry';
       possibleRecord = true;
-      const empty = ui('No accounts or entries yet');
+      const empty = ui(appName === 'entryflow' ? 'No accounts or entries yet' : /^No devices/i);
       const found = await row().or(empty).first().waitFor().then(() => true, () => false);
       if (!found) {
         const markerVisible = await ui(new RegExp(runId)).first().isVisible();
         console.log('Cleanup diagnostic: synthetic identifier visible in dashboard=' + markerVisible);
         throw new Error('The exact synthetic row could not be located.');
       }
-      if (await row().count() === 1) {
+      if (await row().count() === 1 || (appName === 'optispec' && await row().first().isVisible())) {
         stage = 'remove located synthetic entry';
         if (!await removeRecord()) throw new Error('Could not safely identify the entry for removal.');
         console.log('PASS: previous synthetic entry removed');
       } else if (await empty.isVisible() && await row().count() === 0) {
-        console.log('PASS: EntryFlow has no accounts or entries');
+        console.log('PASS: dashboard is empty');
       } else {
         throw new Error('The entry could not be located unambiguously.');
       }
@@ -412,7 +421,7 @@ try {
 } catch {
   // Playwright errors can include form data, so report the stage without exception details.
   console.error('::error title=Browser smoke test failed::' + stage);
-  if (possibleRecord && !recoveryId && stage !== 'remove synthetic record') {
+  if (possibleRecord && !recoveryId && !removalStarted) {
     try {
       // Reset any open dialog and selection while staying inside the same test account.
       await page.reload({ waitUntil: 'domcontentloaded' });
