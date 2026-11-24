@@ -31,7 +31,7 @@ const ui = text => page.getByLabel(text, exact).or(page.getByText(text, exact)).
 const button = name => page.getByRole('button', { name, exact: true }).filter({ visible: true });
 const deviceRows = () => ui(/^Device-ID:\s*\S+/i);
 const knownDevices = new Set([
-  'qa-10c6b569-bd3', 'qa-5ff37d37-ea8', 'qa-836aa8f3-ade', 'qa-a6e3cf5b-1a4', 'qa-3166639d-810', runId,
+  'qa-10c6b569-bd3', 'qa-5ff37d37-ea8', 'qa-836aa8f3-ade', 'qa-a6e3cf5b-1a4', 'qa-3166639d-810', 'qa-043cadfe-fa2', runId,
 ]);
 let selectedDeviceId;
 let removalStarted = false;
@@ -149,7 +149,9 @@ async function signOut() {
 
 async function footerControl(kind) {
   if (appName === 'optispec') {
-    await clickControl(button(kind === 'add' ? 'Add' : 'Remove'));
+    const name = kind === 'add' ? /^(add|add device|plus|\+)$/i : /^(remove|remove device|minus|[-−])$/i;
+    const control = button(name).and(page.getByRole('button', { disabled: false }));
+    await clickControl(control);
     return;
   }
   const names = kind === 'add' ? /^(add (entry|device)|plus|\+)$/i : /^(remove (entry|device)|minus|[-−])$/i;
@@ -256,13 +258,24 @@ async function addRecord() {
   stage = 'verify synthetic record on dashboard';
   await enableSemantics();
   if (appName === 'optispec') {
-    const top = deviceRows().first();
-    await top.waitFor();
-    const label = await top.evaluate(element => element.getAttribute('aria-label') || element.textContent);
-    const id = /^Device-ID:\s*(qa-[0-9a-f]{8}-[0-9a-f]{3})(?=\s|$)/i.exec(label?.trim() ?? '')?.[1];
-    if (!knownDevices.has(id)) throw new Error('The top device is outside the known QA set.');
-    selectedDeviceId = id;
-    console.log('OptiSpec top QA device: ' + id + ', newly submitted=' + (id === runId));
+    const freshDevice = row().first();
+    const newlyVisible = await freshDevice.waitFor({ timeout: 5000 }).then(() => true, () => false);
+    if (newlyVisible) {
+      selectedDeviceId = runId;
+    } else {
+      await deviceRows().first().waitFor();
+      for (const device of await deviceRows().all()) {
+        const label = await device.evaluate(element => element.getAttribute('aria-label') || element.textContent);
+        const id = /^Device-ID:\s*(qa-[0-9a-f]{8}-[0-9a-f]{3})(?=\s|$)/i.exec(label?.trim() ?? '')?.[1];
+        if (knownDevices.has(id)) {
+          selectedDeviceId = id;
+          break;
+        }
+      }
+    }
+    if (!selectedDeviceId) throw new Error('No known QA device is visible for removal.');
+    console.log('OptiSpec selected removal target: ' + selectedDeviceId +
+      ', newly submitted=' + (selectedDeviceId === runId));
   }
   await row().first().waitFor();
 }
@@ -381,9 +394,9 @@ async function removeRecord() {
     await footerControl('remove');
   } else {
     await clickControl(row().first());
-    stage = 'open OptiSpec remove dialog';
-    await button('Remove').and(page.getByRole('button', { disabled: false })).waitFor();
+    stage = 'click the OptiSpec minus button';
     await footerControl('remove');
+    console.log('Clicked OptiSpec minus for device ' + (selectedDeviceId ?? runId) + '.');
   }
 
   stage = 'find the dialog Remove button';

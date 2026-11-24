@@ -36,7 +36,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        app: ${{ fromJSON(github.event_name != 'schedule' && '["entryflow","optispec"]' || github.event.schedule == '13 0,4,7,10,14,17,21 * * *' && '["entryflow"]' || '["optispec"]') }}
+        app: ${{ fromJSON(github.event_name == 'push' && github.event.head_commit.message == 'Verify OptiSpec device removal end to end' && '["optispec"]' || github.event_name != 'schedule' && '["entryflow","optispec"]' || github.event.schedule == '13 0,4,7,10,14,17,21 * * *' && '["entryflow"]' || '["optispec"]') }}
     concurrency:
       group: browser-qa-${{ matrix.app }}
       cancel-in-progress: false
@@ -58,7 +58,7 @@ jobs:
         env:
           MSUO_QA_EMAIL: ${{ secrets.ENTRYFLOW_QA_EMAIL }}
           MSUO_QA_PASSWORD: ${{ secrets.ENTRYFLOW_QA_PASSWORD }}
-          QA_PDF_ONLY: ${{ (github.event_name == 'push' && github.event.head_commit.message != 'Verify synthetic add and remove through the dashboard') || inputs.pdf_only }}
+          QA_PDF_ONLY: ${{ (github.event_name == 'push' && github.event.head_commit.message != 'Verify synthetic add and remove through the dashboard' && github.event.head_commit.message != 'Verify OptiSpec device removal end to end') || inputs.pdf_only }}
           RECOVERY_INPUT: ${{ inputs.recover_entry_id }}
           PUSH_MESSAGE: ${{ github.event_name == 'push' && github.event.head_commit.message || '' }}
         run: |
@@ -84,7 +84,7 @@ jobs:
           MSUO_QA_EMAIL: ${{ secrets.OPTISPEC_QA_EMAIL }}
           MSUO_QA_PASSWORD: ${{ secrets.OPTISPEC_QA_PASSWORD }}
           PUSH_MESSAGE: ${{ github.event_name == 'push' && github.event.head_commit.message || '' }}
-          QA_PDF_ONLY: ${{ (github.event_name == 'push' && github.event.head_commit.message != 'Verify synthetic add and remove through the dashboard') || inputs.pdf_only }}
+          QA_PDF_ONLY: ${{ (github.event_name == 'push' && github.event.head_commit.message != 'Verify synthetic add and remove through the dashboard' && github.event.head_commit.message != 'Verify OptiSpec device removal end to end') || inputs.pdf_only }}
         run: |
           missing=()
           [[ -n "$MSUO_QA_EMAIL" ]] || missing+=("OPTISPEC_QA_EMAIL")
