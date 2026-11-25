@@ -1,6 +1,10 @@
 name: Diagnose License Email Delivery
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/diagnose-license-mail.yml'
 permissions:
   contents: read
 jobs:
