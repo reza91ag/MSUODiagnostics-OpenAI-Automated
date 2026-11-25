@@ -54,7 +54,7 @@ app.MapPost("/api/register", async (RegistrationInput input, FirestoreDb db, Lic
         ["deliveryStatus"] = "pending", ["deliveryAttempts"] = 0, ["schemaVersion"] = 1
     };
     try { await doc.CreateAsync(record, ct); }
-    catch (Google.Cloud.Firestore.V1.FirestoreException ex) when (ex.Status.StatusCode == Grpc.Core.StatusCode.AlreadyExists) {
+    catch (Grpc.Core.RpcException ex) when (ex.StatusCode == Grpc.Core.StatusCode.AlreadyExists) {
         // Deliberately avoid exposing account existence to an unauthenticated caller.
         return Results.Accepted(value: new { message = "If eligible, a license will be emailed to that address." });
     }
