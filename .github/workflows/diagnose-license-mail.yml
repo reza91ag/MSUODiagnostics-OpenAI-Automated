@@ -1,0 +1,30 @@
+name: Diagnose License Email Delivery
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: self-hosted
+    timeout-minutes: 5
+    steps:
+      - name: Inspect license service and delivery errors
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $url = 'http://127.0.0.1:5107/health'
+          try { $r = Invoke-WebRequest $url -UseBasicParsing -TimeoutSec 5; Write-Host "Health HTTP: $($r.StatusCode)" }
+          catch { Write-Host "Health failed: $($_.Exception.Message)" }
+          $task = Get-ScheduledTask -TaskName 'MSUO-LicenseManager' -ErrorAction SilentlyContinue
+          if ($task) { Write-Host "Task state: $($task.State)" }
+          $log = 'C:\MSUO\LicenseManager\startup.log'
+          if (!(Test-Path $log)) { Write-Host "No startup log at $log"; exit 0 }
+          $lines = Get-Content $log -Tail 350
+          Write-Host 'Filtered app diagnostics:'
+          $lines | Where-Object { $_ -match 'fail|error|warn|permission|firestore|grpc|Resend|HttpRequestException|Unauthorized|Forbidden|InvalidOperation|Exception|StatusCode|403|401|422|429|quota|deadline|Unavailable|credentials|service started' } |
+            ForEach-Object {
+              $line = $_ -replace '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}', '[email-redacted]'
+              $line = $line -replace 're_[A-Za-z0-9_\-]+', '[token-redacted]'
+              $line = $line -replace 'MSUO1\.[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+', '[license-redacted]'
+              Write-Host $line
+            } | Select-Object -Last 90
