@@ -72,8 +72,8 @@ public sealed class LicenseMailer(IConfiguration config, IHttpClientFactory fact
         var apiKey = config["RESEND_API_KEY"] ?? throw new InvalidOperationException("RESEND_API_KEY not configured.");
         var from = config["RESEND_FROM"] ?? throw new InvalidOperationException("RESEND_FROM not configured.");
 
-        // Existing official MSUO logo from the observatory assets.
-        var logoUrl = "https://diagnostics.msuo-runtime.io/msuo-logo.svg";
+        // PNG converted from the official MSUO logo, embedded via Resend Content-ID for email clients.
+        const string logoBase64 = "iVBORw0KGgoAAAANSUhEUgAAAHAAAABmBAMAAADhQQj+AAAAGFBMVEUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABWNxwqAAAACHRSTlNosNEA/oYqR0ksdzgAAALbSURBVHja7ZhNj9JQFIbfthg3DFJmZxQ6M1sT6tTtmJmkP9QfgskE15UP3Q4pyEITxw7BGCP04kK+es65vQUlGjOs4JbnnPeer3vBCrDfy8Y9+L+C7+iCTz47MqiuyELzFeESESwdk4V0RBZeeiL4lC6M6e66AFCiX2tS+02XCP3ySAoO0yULZaDztZhQBi7NbV7PfSGiHFRdKjSGxrKdmwkmdGPZzs3EFRU6FUuueacJhBQCOyfwSLRCM+CYCfW0QrdBuh8u9K0ngSwTXOil1I88E7lCNyDLRL7QNcgyYRC6AnkmmNBjceaMzULFYcUy4ZiE/gKZeSjaXcfieGzANA8PN5DtRjLdC0y7WOwFOgc7dFQrOFsW927gImg5FcGjRR24rWeUTSWPKsSP7UNODYI3Q1+0nAUXUdb6gz8WHJu/6zcSXmhzjgYhkZp2cVfApTvQSc0cFlYY9TUFv/ZYBbpV+xblzJaisGCt7hEmz3lxCQd4WBBcS7UqN7/Rjxb2bCveDTe9ah44aiS3ADBL3Eo2bbV6nAemq6vE6Y579HSNeQ2oQ025mfi4qg2zaXQ4frmfF5yL6AQA0l75debxSWWw4lRyGsTUY+l9OAUAu/6hqfWNaLvxigdnnrfHrSJXE2Do81gZPS6A7Eiw9HmMjUXuCWCaJK40k7enQaDZ4wyziad3F0aiVAsAbK9wkLc9ZqaGEwKTIiALb5SJRY7HwFWdHbpjAw7+4s/AMj1KaeUNZdCh46lGDR2JYPrZZOhcngBtIkzRC+EoEffYoRtyJaEcnHsmoW0xquqMngFPqFBfBF16daULS6EUHMUFhRJwbc4olIDnKCo0C3auCwvNgCwTTKjtS22Vskt1j0yANBG7o82K3csrdpvHSys0liaAdbST0LVHVYepaGviBGClxoqWpqYkJ8wkdOmRNb1R6BJkmTAKBZzHgP+drn76SBa+sQlj3f9N+i+BPwFWDtu8GHnt7wAAAABJRU5ErkJggg==";
         var filename = "MSUO-Community-Edition.msuolicense";
         var html = """
 <!DOCTYPE html>
@@ -84,11 +84,11 @@ public sealed class LicenseMailer(IConfiguration config, IHttpClientFactory fact
 <tr><td align="center">
 <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:620px;border:1px solid #e0e5ed;border-radius:18px;background:#ffffff;overflow:hidden;">
 <tr><td align="center" style="padding:36px 32px 15px;">
-<img alt="MSUO" width="90" height="82" src="{{LOGO_URL}}" style="display:block;width:90px;height:82px;object-fit:contain;margin:0 auto 12px;">
-<div style="font-size:13px;letter-spacing:2px;font-weight:700;color:#596a89;">META-SCHEMA UNIVERSAL ORCHESTRATION</div>
+<img alt="MSUO" width="90" height="82" src="cid:msuo-kernel-logo" style="display:block;width:90px;height:82px;object-fit:contain;margin:0 auto 12px;">
+<div style="font-size:13px;letter-spacing:2px;font-weight:700;color:#596a89;">MSUO™ APPLICATION ORCHESTRATION KERNEL</div>
 </td></tr>
 <tr><td style="padding:12px 36px 34px;">
-<h1 style="margin:4px 0 18px;font-size:28px;line-height:1.25;color:#111827;">Welcome to MSUO™</h1>
+<h1 style="margin:4px 0 18px;font-size:28px;line-height:1.25;color:#111827;">Welcome to MSUO™ Application Orchestration Kernel</h1>
 <p style="font-size:16px;line-height:1.7;color:#435169;margin:0 0 20px;">Your <strong>Community Edition</strong> license has been issued and is attached to this email.</p>
 <table role="presentation" width="100%" style="background:#f6f8fc;border:1px solid #dbe3f0;border-radius:12px;">
 <tr><td style="padding:20px 22px;">
@@ -98,16 +98,16 @@ public sealed class LicenseMailer(IConfiguration config, IHttpClientFactory fact
 </td></tr></table>
 <p style="margin:26px 0 8px;font-size:17px;font-weight:700;color:#182641;">Enjoy the new developer experience.</p>
 <p style="font-size:15px;color:#435169;line-height:1.6;margin:0 0 22px;">Build freely, experiment, and explore a different approach to application architecture.</p>
-<p style="font-size:15px;line-height:1.6;color:#435169;margin:0;">Best regards,<br><strong>The MSUO Team</strong></p>
+<p style="font-size:15px;line-height:1.6;color:#435169;margin:0;">Best regards,<br><strong>The MSUO™ Application Orchestration Kernel Team</strong></p>
 </td></tr>
-<tr><td style="padding:22px 36px;background:#f8fafc;border-top:1px solid #e6ebf2;text-align:center;color:#7a889e;font-size:12px;">MSUO™ Community Edition &middot; msuo-runtime.io</td></tr>
+<tr><td style="padding:22px 36px;background:#f8fafc;border-top:1px solid #e6ebf2;text-align:center;color:#7a889e;font-size:12px;">MSUO™ Application Orchestration Kernel &middot; msuo-runtime.io</td></tr>
 </table>
 </td></tr>
 </table>
 </body></html>
-""".Replace("{{LOGO_URL}}",logoUrl);
+""";
 
-        var text = "Welcome to MSUO Community Edition\n\n"
+        var text = "Welcome to MSUO™ Application Orchestration Kernel Community Edition\n\n"
             + "Your signed Community Edition license file is attached: " + filename + "\n\n"
             + "Please keep this file in a safe place. You may need it for SDK setup or restoring your development environment.\n\n"
             + "Enjoy the new developer experience.\n\nBest regards,\nThe MSUO Team";
@@ -117,11 +117,12 @@ public sealed class LicenseMailer(IConfiguration config, IHttpClientFactory fact
         request.Content = System.Net.Http.Json.JsonContent.Create(new {
             from,
             to = new[] { address },
-            subject = "Welcome to MSUO — Your Community Edition License",
+            subject = "MSUO™ Application Orchestration Kernel — Your Community Edition License",
             html,
             text,
             attachments = new [] {
-                new { filename, content = Convert.ToBase64String(Encoding.UTF8.GetBytes(license)) }
+                new { filename, content = Convert.ToBase64String(Encoding.UTF8.GetBytes(license)), content_type = "application/octet-stream", content_id = (string?)null },
+                new { filename = "msuo-logo.png", content = logoBase64, content_type = "image/png", content_id = "msuo-kernel-logo" }
             }
         });
         using var response=await factory.CreateClient().SendAsync(request,ct);
