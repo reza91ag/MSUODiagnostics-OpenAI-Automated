@@ -101,7 +101,13 @@ jobs:
           $trigger = New-ScheduledTaskTrigger -AtStartup
           $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Seconds 0) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
           Register-ScheduledTask -TaskName 'MSUO-LicenseManager' -Action $action -Trigger $trigger -Settings $settings -User 'SYSTEM' -RunLevel Highest -Force | Out-Null
-          Start-ScheduledTask -TaskName 'MSUO-LicenseManager'
+          # Start a detached process independent of the GitHub runner process group.
+          # RUNNER_TRACKING_ID is what the runner uses to terminate orphan processes after jobs.
+          $previousTrackingId = $env:RUNNER_TRACKING_ID
+          $env:RUNNER_TRACKING_ID = ''
+          $proc = Start-Process -FilePath 'powershell.exe' -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$target\start.ps1`"" -PassThru -WindowStyle Hidden
+          $env:RUNNER_TRACKING_ID = $previousTrackingId
+          Write-Host "Detached launcher PID: $($proc.Id)"
           $healthy = $false
           for ($i=0; $i -lt 12; $i++) {
             Start-Sleep -Seconds 2
@@ -113,6 +119,7 @@ jobs:
           if (-not $healthy) {
             Write-Host "License Manager failed to answer /health"
             Get-ScheduledTaskInfo -TaskName 'MSUO-LicenseManager' | Format-List *
+            Get-Content "$target\start.ps1" -ErrorAction SilentlyContinue | Select-Object -First 12
             Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*MSUO.LicenseManager*' } | Select-Object ProcessId,Name,CommandLine | Format-Table -AutoSize
             if (Test-Path "$target\startup.log") {
               Get-Content "$target\startup.log" -Tail 60
