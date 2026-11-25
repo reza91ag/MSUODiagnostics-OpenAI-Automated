@@ -30,7 +30,7 @@ jobs:
       - name: Check prerequisite credentials
         shell: powershell
         run: |
-          $required = @('C:\MSUO\Secrets\firebase-service-account.json', 'C:\MSUO\Secrets\MSUO_signing_private.pem', 'C:\MSUO\Secrets\smtp.json')
+          $required = @('C:\MSUO\Secrets\firebase-service-account.json', 'C:\MSUO\Secrets\MSUO_signing_private.pem', 'C:\MSUO\Secrets\resend.json')
           foreach ($p in $required) {
             if (!(Test-Path -LiteralPath $p)) { throw "Missing private server credential: $p. Do not commit credentials to GitHub." }
           }
@@ -46,12 +46,9 @@ jobs:
           $launcher = @'
           $env:GOOGLE_APPLICATION_CREDENTIALS = 'C:\MSUO\Secrets\firebase-service-account.json'
           $env:SIGNING_PRIVATE_KEY_PATH = 'C:\MSUO\Secrets\MSUO_signing_private.pem'
-          $smtp = Get-Content 'C:\MSUO\Secrets\smtp.json' -Raw | ConvertFrom-Json
-          $env:SMTP_HOST = $smtp.host
-          $env:SMTP_PORT = [string]$smtp.port
-          $env:SMTP_USER = $smtp.user
-          $env:SMTP_PASSWORD = $smtp.password
-          $env:SMTP_FROM = $smtp.from
+          $resend = Get-Content 'C:\MSUO\Secrets\resend.json' -Raw | ConvertFrom-Json
+          $env:RESEND_API_KEY = $resend.'Mail-Service'.Token
+          $env:RESEND_FROM = $resend.From
           $env:FIREBASE_PROJECT_ID = 'msuo-community-licensemanager'
           $env:BIND_URL = 'http://127.0.0.1:5107'
           Set-Location 'C:\MSUO\LicenseManager'
