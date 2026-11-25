@@ -1,14 +1,31 @@
-# MSUO Community Edition Licensing Portal
-ASP.NET Core 9, local port 5107, public hostname intended: https://license.msuo-runtime.io.
+# MSUO Community Edition License Manager
 
-## Registration
-Only an email is submitted. No Firebase Authentication users, passwords, Web API key, or login.
-The server checks Firestore collection `CommunityEdition`. Each normalized email's SHA-256 is the document ID, so case-insensitive duplicates cannot create another license, including during races. A signed RSA-PSS/SHA-256 license is stored under `CommunityEdition/{emailHash}`, and the license key is emailed via SMTP; it is never displayed in the browser. Failures are marked pending and retried by a background worker. Repeated requests return the same generic response without disclosing whether an email exists.
+ASP.NET Core 9 service on `http://127.0.0.1:5107`, intended public hostname `https://license.msuo-runtime.io`.
 
-## Required private server configuration (never commit)
-- GOOGLE_APPLICATION_CREDENTIALS: absolute path to service-account JSON on the runner/server
-- SIGNING_PRIVATE_KEY_PATH: absolute path to the MSUO signing private key PEM
-- FIREBASE_PROJECT_ID: msuo-community-licensemanager
-- SMTP_HOST, SMTP_PORT (default 587), SMTP_USER, SMTP_PASSWORD, SMTP_FROM
+## Flow
+Visitor submits **email only**. No passwords, Firebase Authentication, or Firebase Web API key.
+The backend normalizes the address and uses its SHA-256 as the Firestore document ID inside `CommunityEdition`. A new address receives a signed RSA-PSS/SHA-256 license; duplicate addresses do not create another license. Browser responses are generic, and the license is delivered by **Resend email**, never shown on the page. Pending emails are retried (up to 10 attempts).
 
-The server must have the selected SMTP provider account configured. No email can be delivered without a working sender. The app has an unauthenticated email form, so use suitable abuse limits and CAPTCHA for public production rollout.
+## Required runner configuration
+Place these locally on the Windows deployment server (the deployment workflow does not copy them):
+
+- `C:\MSUO\Secrets\firebase-service-account.json` — supplied Firebase service account
+- `C:\MSUO\Secrets\MSUO_signing_private.pem` — generated MSUO RSA private signing key
+- `C:\MSUO\Secrets\resend.json` — Resend configuration of the following shape:
+```json
+{
+  "Mail-Service": { "Provider": "Resend", "Token": "your-resend-api-key" },
+  "From": "MSUO <license@msuo-runtime.io>"
+}
+```
+The `From` address must belong to a sending domain verified in Resend (or another Resend-authorized sender). The domain is a proposed address, not verified here.
+
+The runner reads this file into `RESEND_API_KEY` and `RESEND_FROM` for the .NET service. The Firebase service-account JSON goes into `GOOGLE_APPLICATION_CREDENTIALS`. No API credentials belong in the public repository.
+
+## Build
+`dotnet publish license-manager/MSUO.LicenseManager.csproj -c Release`
+
+## Smoke test
+`GET http://127.0.0.1:5107/health` — after the server is running.
+
+This service is independent of MSUO Diagnostics, which uses its own port.
