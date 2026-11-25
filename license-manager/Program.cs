@@ -121,13 +121,20 @@ public sealed class LicenseMailer(IConfiguration config, IHttpClientFactory fact
             html,
             text,
             attachments = new [] {
-                new { filename, content = Convert.ToBase64String(Encoding.UTF8.GetBytes(license)), content_type = "application/octet-stream", content_id = (string?)null },
+                new { filename, content = Convert.ToBase64String(Encoding.UTF8.GetBytes(license)), content_type = "application/octet-stream", content_id = "" },
                 new { filename = "msuo-logo.png", content = logoBase64, content_type = "image/png", content_id = "msuo-kernel-logo" }
             }
         });
         using var response=await factory.CreateClient().SendAsync(request,ct);
         if(!response.IsSuccessStatusCode)
-            throw new HttpRequestException("Resend rejected the license email with HTTP " + (int)response.StatusCode);
+            {
+            var body = await response.Content.ReadAsStringAsync(ct);
+            // Preserve the validation reason, but redact any accidentally echoed personal/secret data.
+            body = Regex.Replace(body, @"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}", "[email-redacted]");
+            body = Regex.Replace(body, @"re_[A-Za-z0-9_\-]+", "[api-key-redacted]");
+            body = Regex.Replace(body, @"MSUO1\.[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+", "[license-redacted]");
+            throw new HttpRequestException("Resend rejected license email HTTP " + (int)response.StatusCode + ": " + body[..Math.Min(body.Length, 600)]);
+        }
     }
 }
 
