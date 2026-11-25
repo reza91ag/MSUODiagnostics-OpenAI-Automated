@@ -17,6 +17,7 @@ import threading
 import time
 import webbrowser
 from datetime import datetime, timezone
+from html import escape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
@@ -597,6 +598,36 @@ def compute_data(operation="all", window=50, ignore_outliers=True, startup="all"
     }
 
 
+def render_dashboard(data):
+    """Populate the public summary before the first browser refresh."""
+    sources = data["sources"]
+    best = min(
+        (group for group in data["groups"] if group["fastest_ms"] is not None),
+        key=lambda group: group["fastest_ms"],
+        default=None,
+    )
+    scanned_at = datetime.fromisoformat(data["generated_utc"])
+    connected = any(source["ok"] for source in sources)
+    values = {
+        "TOTAL": f'{data["included_count"]:,}',
+        "TOTAL_HINT": (
+            f'{data["selected_count"]} selected · {data["excluded_count"]} outliers excluded · '
+            f'{data["operation_requests"]} matching lifecycles'
+        ),
+        "FASTEST": f'{best["fastest_ms"]:,} ms' if best else "—",
+        "FASTEST_LABEL": best["label"] if best else "Awaiting samples",
+        "SOURCES": f'{sum(source["ok"] for source in sources)} / {len(sources)}',
+        "SOURCES_HINT": f'{sum(source["files"] for source in sources)} log files accessible',
+        "LAST_SCAN": scanned_at.strftime("%H:%M:%S UTC"),
+        "STATUS": "Monitoring live" if connected else "No connected source",
+        "STATUS_DOT": "" if connected else " bad",
+    }
+    page = WEB_PATH.read_text(encoding="utf-8")
+    for name, value in values.items():
+        page = page.replace(f"<!--INITIAL_{name}-->", escape(value))
+    return page.encode("utf-8")
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "MSUO-Live/1.0"
 
@@ -652,7 +683,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         url = urlsplit(self.path)
         if url.path in ("/", "/index.html"):
-            self.send_bytes(WEB_PATH.read_bytes(), "text/html; charset=utf-8")
+            self.send_bytes(render_dashboard(self.selection({})), "text/html; charset=utf-8")
         elif url.path == "/assets/msuo-logo.svg":
             self.send_bytes(LOGO_PATH.read_bytes(), "image/svg+xml; charset=utf-8")
         elif url.path == "/api/config":

@@ -54,7 +54,7 @@ dialog{border:0;border-radius:15px;padding:0;width:min(850px,94vw);box-shadow:0 
 <div class="shell">
   <header>
     <div class="brand"><img class="brand-logo" src="/assets/msuo-logo.svg" alt="MSUO logo" /><div><h1>MSUO <span style="font-weight:400;color:#7b94a7">/</span> Live Execution Observatory</h1><p>WatchDog telemetry · Production lifecycle benchmark · Local research console</p></div></div>
-    <div class="row"><div id="status" class="status"><span class="dot"></span><span id="statusText">Starting monitor…</span></div><button class="button" id="sourcesBtn">Configure log folders</button><div class="export-menu" id="exportMenu"><button class="button export-trigger" id="exportBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="exportOptions">Export <span aria-hidden="true">▾</span></button><nav class="export-options" id="exportOptions" aria-label="Export formats"><a id="pdfExport" href="/api/export.pdf?operation=all&amp;window=50">PDF report</a><a id="latexExport" href="/api/export.tex?operation=all&amp;window=50">LaTeX tables</a><button id="copyLatex" type="button">Copy LaTeX</button><a id="csvExport" href="/api/export.csv">CSV (filtered selection)</a></nav></div></div>
+    <div class="row"><div id="status" class="status"><span class="dot<!--INITIAL_STATUS_DOT-->"></span><span id="statusText"><!--INITIAL_STATUS--></span></div><button class="button" id="sourcesBtn">Configure log folders</button><div class="export-menu" id="exportMenu"><button class="button export-trigger" id="exportBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="exportOptions">Export <span aria-hidden="true">▾</span></button><nav class="export-options" id="exportOptions" aria-label="Export formats"><a id="pdfExport" href="/api/export.pdf?operation=all&amp;window=50">PDF report</a><a id="latexExport" href="/api/export.tex?operation=all&amp;window=50">LaTeX tables</a><button id="copyLatex" type="button">Copy LaTeX</button><a id="csvExport" href="/api/export.csv">CSV (filtered selection)</a></nav></div></div>
   </header>
   <div id="warnings"></div>
   <section class="controls">
@@ -68,10 +68,10 @@ dialog{border:0;border-radius:15px;padding:0;width:min(850px,94vw);box-shadow:0 
     <div class="row"><span class="muted" style="font-size:12px">Auto-refresh every 2 seconds</span><button class="button" id="refreshBtn">Refresh now</button></div>
   </section>
   <section class="metrics">
-    <div class="metric"><small id="totalLabel">Completed requests</small><strong id="total">—</strong><span class="hint" id="totalHint">Unique WatchDog lifecycles across all operations</span></div>
-    <div class="metric"><small>Fastest momentary</small><strong id="fastest" style="color:var(--teal)">—</strong><span class="hint" id="fastestLabel">Awaiting samples</span></div>
-    <div class="metric"><small>Monitored sources</small><strong id="sources">—</strong><span class="hint" id="sourcesHint">UNC / mapped folders</span></div>
-    <div class="metric"><small>Last scan</small><strong id="lastScan" style="font-size:22px">—</strong><span class="hint">Times shown in local browser time</span></div>
+    <div class="metric"><small id="totalLabel">Completed requests</small><strong id="total"><!--INITIAL_TOTAL--></strong><span class="hint" id="totalHint"><!--INITIAL_TOTAL_HINT--></span></div>
+    <div class="metric"><small>Fastest momentary</small><strong id="fastest" style="color:var(--teal)"><!--INITIAL_FASTEST--></strong><span class="hint" id="fastestLabel"><!--INITIAL_FASTEST_LABEL--></span></div>
+    <div class="metric"><small>Monitored sources</small><strong id="sources"><!--INITIAL_SOURCES--></strong><span class="hint" id="sourcesHint"><!--INITIAL_SOURCES_HINT--></span></div>
+    <div class="metric"><small>Last scan</small><strong id="lastScan" style="font-size:22px"><!--INITIAL_LAST_SCAN--></strong><span class="hint" id="lastScanHint">Time shown in UTC</span></div>
   </section>
   <section class="panel" id="healthPanel">
     <div class="panel-head"><div><h2>Latency Health</h2><p>Request-distance and anomaly clustering · diagnostic signal, not root-cause attribution</p></div><button class="button" id="healthToggle" type="button" aria-expanded="false" aria-controls="healthDetails"><span id="healthBadge">Awaiting samples</span> <span id="healthChevron" aria-hidden="true">▾</span></button></div>
@@ -205,7 +205,7 @@ function renderHealth(health){
 }
 function render(d){data=d;renderHealth(d.health);syncExportLinks();const groups=d.groups;const available=groups.filter(g=>g.n);$('total').textContent=num(d.included_count);$('totalLabel').textContent=selectedOperations.has('all')?'Completed requests':'Selected operation requests';$('totalHint').textContent=`${d.selected_count} selected · ${d.excluded_count} outliers excluded · ${d.operation_requests} matching lifecycles`;$('sources').textContent=`${d.sources.filter(s=>s.ok).length} / ${d.sources.length}`;$('sourcesHint').textContent=`${d.sources.reduce((a,s)=>a+s.files,0)} log files accessible`;
  if(available.length){const best=[...available].sort((a,b)=>a.fastest_ms-b.fastest_ms)[0];$('fastest').textContent=ms(best.fastest_ms);$('fastestLabel').textContent=best.label;}else{$('fastest').textContent='—';$('fastestLabel').textContent='Awaiting samples';}
- $('lastScan').textContent=new Date(d.generated_utc).toLocaleTimeString();const ok=d.sources.some(s=>s.ok);$('status').innerHTML=`<span class="dot ${ok?'':'bad'}"></span><span>${ok?'Monitoring live':'No connected source'}</span>`;
+ $('lastScan').textContent=new Date(d.generated_utc).toLocaleTimeString();$('lastScanHint').textContent='Time shown in local browser time';const ok=d.sources.some(s=>s.ok);$('status').innerHTML=`<span class="dot ${ok?'':'bad'}"></span><span>${ok?'Monitoring live':'No connected source'}</span>`;
  const warn=d.warnings.slice(0,5);$('warnings').replaceChildren();if(warn.length){const w=dom('div',warn.join('\n'),'warning');$('warnings').append(w);}
  renderChart(groups);renderSummary(groups);renderRecent(d.recent);
 }
