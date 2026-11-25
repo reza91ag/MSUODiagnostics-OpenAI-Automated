@@ -59,7 +59,8 @@ app.MapPost("/api/register", async (RegistrationInput input, FirestoreDb db, Lic
         // Deliberately avoid exposing account existence to an unauthenticated caller.
         return Results.Accepted(value: new { message = "If eligible, a license will be emailed to that address." });
     }
-    // The background worker sends the license. No browser ever receives the key.\n    return Results.Accepted(value: new { message = "If eligible, a license will be emailed to that address." });
+    // The background worker sends the license. No browser ever receives the key.
+    return Results.Accepted(value: new { message = "If eligible, a license will be emailed to that address." });
 }).RequireRateLimiting("register");
 
 app.Run();
