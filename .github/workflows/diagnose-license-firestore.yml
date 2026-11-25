@@ -1,0 +1,21 @@
+name: Diagnose License Firestore Status
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/diagnose-license-firestore.yml'
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: self-hosted
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect Firestore delivery states
+        shell: powershell
+        run: |
+          $env:GOOGLE_APPLICATION_CREDENTIALS = 'C:\MSUO\Secrets\firebase-service-account.json'
+          dotnet run --project .\tools\license-mail-diagnostics\license-mail-diagnostics.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw "Firestore diagnostics failed" }
