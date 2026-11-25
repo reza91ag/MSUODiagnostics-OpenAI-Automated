@@ -3,6 +3,7 @@ from argparse import ArgumentParser
 from base64 import b64decode
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from struct import pack
 from urllib.parse import urlsplit
 
 
@@ -32,6 +33,9 @@ def main():
     ).encode("utf-8")
     favicon = b64decode((directory / "favicon.png.b64").read_text(encoding="ascii").strip())
     routes["/favicon.png"] = ("image/png", favicon)
+    # ICO container with the original 96px PNG; supports legacy icon requests.
+    ico = pack("<HHH", 0, 1, 1) + pack("<BBBBHHII", 96, 96, 0, 0, 1, 32, len(favicon), 22) + favicon
+    routes["/favicon.ico"] = ("image/x-icon", ico)
     routes["/sitemap.xml"] = ("application/xml; charset=utf-8", sitemap)
     routes["/robots.txt"] = ("text/plain; charset=utf-8", robots)
     for number in range(1, 4):
