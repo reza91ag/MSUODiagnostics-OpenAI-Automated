@@ -1,0 +1,15 @@
+import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+import {getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,onAuthStateChanged,sendEmailVerification,sendPasswordResetEmail,signOut} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+const $=id=>document.getElementById(id);
+const response=await fetch('/api/config');if(!response.ok)throw Error('Firebase config unavailable');
+const auth=getAuth(initializeApp(await response.json()));
+const msg=t=>$('message').textContent=t;
+const busy=async f=>{const buttons=[...document.querySelectorAll('button')];buttons.forEach(b=>b.disabled=true);try{await f()}catch(e){msg(e.message||'Request failed')}finally{buttons.forEach(b=>b.disabled=false)}};
+$('register').onclick=()=>busy(async()=>{const u=await createUserWithEmailAndPassword(auth,$('email').value.trim(),$('password').value);await sendEmailVerification(u.user);msg('Account created. Check your email to verify it.')});
+$('signin').onclick=()=>busy(async()=>{await signInWithEmailAndPassword(auth,$('email').value.trim(),$('password').value);msg('Signed in.')});
+$('reset').onclick=()=>busy(async()=>{await sendPasswordResetEmail(auth,$('email').value.trim());msg('If this account exists, a reset email will be sent.')});
+$('resend').onclick=()=>busy(async()=>{await sendEmailVerification(auth.currentUser);msg('Verification email sent.')});
+$('signout').onclick=()=>busy(async()=>{await signOut(auth);$('license').value='';msg('Signed out.')});
+$('issue').onclick=()=>busy(async()=>{const user=auth.currentUser;await user.reload();if(!user.emailVerified){msg('Verify your email first.');return}const token=await user.getIdToken(true);const r=await fetch('/api/license',{method:'POST',headers:{Authorization:'Bearer '+token}});const data=await r.json();if(!r.ok)throw Error(data.error||'License request failed');$('license').value=data.licenseKey;msg('License issued.')});
+$('copy').onclick=()=>busy(async()=>{if($('license').value){await navigator.clipboard.writeText($('license').value);msg('Copied.')}});
+onAuthStateChanged(auth,user=>{$('auth').style.display=user?'none':'block';$('account').style.display=user?'block':'none';$('identity').textContent=user?'Signed in as '+user.email:''});
