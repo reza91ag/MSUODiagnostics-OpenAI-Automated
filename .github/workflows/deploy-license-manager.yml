@@ -1,0 +1,59 @@
+name: Deploy MSUO License Manager (IONOS Windows)
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'license-manager/**'
+      - '.github/workflows/deploy-license-manager.yml'
+permissions:
+  contents: read
+concurrency:
+  group: msuo-license-manager
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: self-hosted
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check prerequisite credentials
+        shell: powershell
+        run: |
+          $required = @('C:\MSUO\Secrets\firebase-service-account.json', 'C:\MSUO\Secrets\MSUO_signing_private.pem', 'C:\MSUO\Secrets\firebase-web-api-key.txt')
+          foreach ($p in $required) {
+            if (!(Test-Path -LiteralPath $p)) { throw "Missing private server credential: $p. Do not commit credentials to GitHub." }
+          }
+      - name: Publish .NET application
+        shell: powershell
+        run: |
+          dotnet --info
+          dotnet publish .\license-manager\MSUO.LicenseManager.csproj -c Release -o "$env:RUNNER_TEMP\msuo-license-publish"
+          if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed" }
+      - name: Deploy and install startup task
+        shell: powershell
+        run: |
+          $target = 'C:\MSUO\LicenseManager'
+          New-Item -Force -ItemType Directory $target | Out-Null
+          $old = Get-ScheduledTask -TaskName 'MSUO-LicenseManager' -ErrorAction SilentlyContinue
+          if ($old) { Stop-ScheduledTask -TaskName 'MSUO-LicenseManager' -ErrorAction SilentlyContinue }
+          Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'dotnet.exe' -and $_.CommandLine -like '*MSUO.LicenseManager.dll*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+          Copy-Item "$env:RUNNER_TEMP\msuo-license-publish\*" $target -Recurse -Force
+          $launcher = @'
+          $env:GOOGLE_APPLICATION_CREDENTIALS = 'C:\MSUO\Secrets\firebase-service-account.json'
+          $env:SIGNING_PRIVATE_KEY_PATH = 'C:\MSUO\Secrets\MSUO_signing_private.pem'
+          $env:FIREBASE_WEB_API_KEY = (Get-Content 'C:\MSUO\Secrets\firebase-web-api-key.txt' -Raw).Trim()
+          $env:FIREBASE_PROJECT_ID = 'msuo-community-licensemanager'
+          $env:BIND_URL = 'http://127.0.0.1:5107'
+          Set-Location 'C:\MSUO\LicenseManager'
+          & dotnet 'C:\MSUO\LicenseManager\MSUO.LicenseManager.dll'
+          '@
+          Set-Content -Path "$target\start.ps1" -Value $launcher -Encoding UTF8
+          $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$target\start.ps1`""
+          $trigger = New-ScheduledTaskTrigger -AtStartup
+          $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Seconds 0) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
+          Register-ScheduledTask -TaskName 'MSUO-LicenseManager' -Action $action -Trigger $trigger -Settings $settings -User 'SYSTEM' -RunLevel Highest -Force | Out-Null
+          Start-ScheduledTask -TaskName 'MSUO-LicenseManager'
+          Start-Sleep -Seconds 8
+          $response = Invoke-WebRequest 'http://127.0.0.1:5107/health' -UseBasicParsing -TimeoutSec 10
+          if ($response.StatusCode -ne 200) { throw "Health check failed" }
