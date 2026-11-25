@@ -1,4 +1,5 @@
 name: Diagnose License Email Delivery
+# Trigger post-validation diagnostics
 on:
   workflow_dispatch:
   push:
