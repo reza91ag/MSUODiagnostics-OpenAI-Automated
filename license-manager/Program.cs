@@ -58,16 +58,7 @@ app.MapPost("/api/register", async (RegistrationInput input, FirestoreDb db, Lic
         // Deliberately avoid exposing account existence to an unauthenticated caller.
         return Results.Accepted(value: new { message = "If eligible, a license will be emailed to that address." });
     }
-    // First delivery attempt; if SMTP fails, leave it pending for the background retry worker.
-    try {
-        await mailer.SendAsync(email, license, ct);
-        await doc.UpdateAsync(new Dictionary<string, object>{
-            ["deliveryStatus"] = "sent", ["sentAt"] = Timestamp.GetCurrentTimestamp(), ["deliveryAttempts"] = 1
-        }, cancellationToken: ct);
-    } catch (Exception ex) {
-        log.LogError(ex, "License email delivery failed; record remains queued.");
-    }
-    return Results.Accepted(value: new { message = "If eligible, a license will be emailed to that address." });
+    // The background worker sends the license. No browser ever receives the key.\n    return Results.Accepted(value: new { message = "If eligible, a license will be emailed to that address." });
 }).RequireRateLimiting("register");
 
 app.Run();
@@ -105,7 +96,7 @@ public sealed class PendingMailWorker(FirestoreDb db, LicenseMailer mailer, ILog
                 foreach (var record in docs.Documents) {
                     if (stoppingToken.IsCancellationRequested) break;
                     var attempts = record.TryGetValue<long>("deliveryAttempts", out var n) ? n : 0L;
-                    if (attempts >= 10) continue;
+                    if (attempts >= 10) { await record.Reference.UpdateAsync(new Dictionary<string, object> { ["deliveryStatus"] = "failed" }, cancellationToken: stoppingToken); continue; }
                     try {
                         await record.Reference.UpdateAsync(new Dictionary<string, object> {
                             ["deliveryAttempts"] = attempts + 1,
