@@ -44,7 +44,7 @@ jobs:
           New-Item -ItemType Directory -Path $dir -Force | Out-Null
           [System.IO.File]::WriteAllText((Join-Path $dir 'firebase-service-account.json'), $env:FIREBASE_SERVICE_ACCOUNT_JSON, (New-Object System.Text.UTF8Encoding($false)))
           [System.IO.File]::WriteAllText((Join-Path $dir 'MSUO_signing_private.pem'), $env:MSUO_SIGNING_PRIVATE_KEY, (New-Object System.Text.UTF8Encoding($false)))
-          $resend = @{ 'Mail-Service' = @{ Provider = 'Resend'; Token = $env:RESEND_API_KEY }; From = 'MSUO™ Application Orchestration Kernel <license@msuo-runtime.io>' }
+          $resend = @{ 'Mail-Service' = @{ Provider = 'Resend'; Token = $env:RESEND_API_KEY }; From = 'MSUO Application Orchestration Kernel <license@msuo-runtime.io>' }
           [System.IO.File]::WriteAllText((Join-Path $dir 'resend.json'), ($resend | ConvertTo-Json -Depth 4), (New-Object System.Text.UTF8Encoding($false)))
           $account = Get-Content (Join-Path $dir 'firebase-service-account.json') -Raw | ConvertFrom-Json
           if ($account.project_id -ne 'msuo-community-licensemanager') { throw 'Firebase project ID mismatch' }
