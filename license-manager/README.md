@@ -1,0 +1,4 @@
+# MSUO Community Edition License Manager
+Separate ASP.NET Core 9 service bound to http://127.0.0.1:5107 and intended for https://license.msuo-runtime.io. Firebase project: msuo-community-licensemanager.
+Requires Firebase Email/Password auth enabled, Firestore database and authorized domain, server credentials at GOOGLE_APPLICATION_CREDENTIALS, RSA signing private key at SIGNING_PRIVATE_KEY_PATH, Firebase Web API key at FIREBASE_WEB_API_KEY. Public key goes in MSUO SDK. Firebase service-account JSON must never be committed.
+Data is stored in Firestore CommunityEdition/{uid}. License strings are RSA-PSS/SHA256 signed and can be verified offline. The included license service is not the MSUO kernel.
