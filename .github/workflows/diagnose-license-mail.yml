@@ -32,3 +32,19 @@ jobs:
               $line = $line -replace 'MSUO1\.[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+', '[license-redacted]'
               Write-Host $line
             } | Select-Object -Last 90
+      - name: Check Resend sent email statuses
+        shell: powershell
+        run: |
+          $config = Get-Content 'C:\MSUO\Secrets\resend.json' -Raw | ConvertFrom-Json
+          $headers = @{ Authorization = 'Bearer ' + $config.'Mail-Service'.Token }
+          try {
+            $res = Invoke-RestMethod -Uri 'https://api.resend.com/emails?limit=20' -Headers $headers -Method Get -TimeoutSec 15
+            $matches = @($res.data | Where-Object { $_.subject -eq 'Your MSUO Community Edition License' })
+            Write-Host "MSUO license emails returned by Resend: $($matches.Count)"
+            foreach ($m in ($matches | Select-Object -First 8)) {
+              Write-Host ("Created: " + $m.created_at + "; status: " + $m.last_event + "; id: " + $m.id)
+            }
+          } catch {
+            $status = if ($_.Exception.Response) { [int]$_.Exception.Response.StatusCode } else { 'unavailable' }
+            Write-Host "Resend email-list lookup failed (HTTP $status). API keys with send-only permission cannot read email history."
+          }
