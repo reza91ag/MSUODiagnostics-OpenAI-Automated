@@ -17,6 +17,12 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+      - name: Publish .NET application
+        shell: powershell
+        run: |
+          dotnet --info
+          dotnet publish .\license-manager\MSUO.LicenseManager.csproj -c Release -o "$env:RUNNER_TEMP\msuo-license-publish"
+          if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed" }
       - name: Check prerequisite credentials
         shell: powershell
         run: |
@@ -24,12 +30,6 @@ jobs:
           foreach ($p in $required) {
             if (!(Test-Path -LiteralPath $p)) { throw "Missing private server credential: $p. Do not commit credentials to GitHub." }
           }
-      - name: Publish .NET application
-        shell: powershell
-        run: |
-          dotnet --info
-          dotnet publish .\license-manager\MSUO.LicenseManager.csproj -c Release -o "$env:RUNNER_TEMP\msuo-license-publish"
-          if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed" }
       - name: Deploy and install startup task
         shell: powershell
         run: |
