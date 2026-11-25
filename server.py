@@ -609,10 +609,11 @@ def render_dashboard(data):
     scanned_at = datetime.fromisoformat(data["generated_utc"])
     connected = any(source["ok"] for source in sources)
     values = {
-        "TOTAL": f'{data["included_count"]:,}',
-        "TOTAL_HINT": (
-            f'{data["selected_count"]} selected · {data["excluded_count"]} outliers excluded · '
-            f'{data["operation_requests"]} matching lifecycles'
+        "TOTAL": f'{data["total_requests"]:,}',
+        "SAMPLE_SUMMARY": (
+            f'{data["selected_count"]:,} requests selected · '
+            f'{data["excluded_count"]:,} outliers excluded · '
+            f'{data["included_count"]:,} used in statistics'
         ),
         "FASTEST": f'{best["fastest_ms"]:,} ms' if best else "—",
         "FASTEST_LABEL": best["label"] if best else "Awaiting samples",
