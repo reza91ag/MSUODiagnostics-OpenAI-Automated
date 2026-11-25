@@ -1,4 +1,5 @@
 name: Diagnose License Email Delivery
+# Verify registration endpoint from IONOS runner
 # Trigger post-validation diagnostics
 on:
   workflow_dispatch:
@@ -18,6 +19,18 @@ jobs:
         run: |
           $ErrorActionPreference = 'Continue'
           $url = 'http://127.0.0.1:5107/health'
+          try {
+            $r = Invoke-WebRequest 'http://127.0.0.1:5107/api/register' -Method Post -ContentType 'application/json' -Body '{"email":"not-an-email"}' -UseBasicParsing -TimeoutSec 15
+            Write-Host "Local registration probe HTTP: $($r.StatusCode)"
+          } catch {
+            $status = if ($_.Exception.Response) { [int]$_.Exception.Response.StatusCode } else { 'no HTTP response' }
+            Write-Host "Local registration probe status: $status"
+            Write-Host "Local probe exception: $($_.Exception.GetType().Name)"
+          }
+          try {
+            $r = Invoke-WebRequest 'https://license.msuo-runtime.io/health' -UseBasicParsing -TimeoutSec 12
+            Write-Host "Public license health: $($r.StatusCode)"
+          } catch { Write-Host "Public license health error: $($_.Exception.Message)" }
           try { $r = Invoke-WebRequest $url -UseBasicParsing -TimeoutSec 5; Write-Host "Health HTTP: $($r.StatusCode)" }
           catch { Write-Host "Health failed: $($_.Exception.Message)" }
           $task = Get-ScheduledTask -TaskName 'MSUO-LicenseManager' -ErrorAction SilentlyContinue
