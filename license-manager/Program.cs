@@ -24,6 +24,7 @@ if (string.IsNullOrWhiteSpace(keyPath) || !File.Exists(keyPath))
 // The Google Cloud library performs server-side auth. No Firebase Authentication users are created.
 builder.Services.AddSingleton(FirestoreDb.Create(projectId));
 builder.Services.AddSingleton(new LicenseSigner(File.ReadAllText(keyPath)));
+builder.Services.AddHttpClient();
 builder.Services.AddSingleton<LicenseMailer>();
 builder.Services.AddHostedService<PendingMailWorker>();
 
@@ -65,24 +66,23 @@ app.Run();
 
 public sealed record RegistrationInput(string Email);
 
-public sealed class LicenseMailer(IConfiguration config) {
+public sealed class LicenseMailer(IConfiguration config, IHttpClientFactory factory) {
     public async Task SendAsync(string address, string license, CancellationToken ct) {
-        var host = config["SMTP_HOST"] ?? throw new InvalidOperationException("SMTP_HOST missing.");
-        var username = config["SMTP_USER"] ?? throw new InvalidOperationException("SMTP_USER missing.");
-        var password = config["SMTP_PASSWORD"] ?? throw new InvalidOperationException("SMTP_PASSWORD missing.");
-        var from = config["SMTP_FROM"] ?? throw new InvalidOperationException("SMTP_FROM missing.");
-        var port = int.TryParse(config["SMTP_PORT"], out var number) ? number : 587;
-        using var message = new MailMessage(from, address) {
-            Subject = "Your MSUO Community Edition License",
-            Body = "Thank you for registering for MSUO Community Edition.\n\nYour signed license key:\n\n" + license + "\n\nKeep this key for your SDK installation.\n\nMSUO",
-            IsBodyHtml = false
-        };
-        using var smtp = new SmtpClient(host, port) {
-            EnableSsl = true, Credentials = new System.Net.NetworkCredential(username, password),
-            DeliveryMethod = SmtpDeliveryMethod.Network, Timeout = 20000
-        };
-        ct.ThrowIfCancellationRequested();
-        await smtp.SendMailAsync(message, ct);
+        var apiKey = config["RESEND_API_KEY"] ?? throw new InvalidOperationException("RESEND_API_KEY not configured.");
+        var from = config["RESEND_FROM"] ?? throw new InvalidOperationException("RESEND_FROM not configured.");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.resend.com/emails");
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+        request.Headers.UserAgent.ParseAdd("MSUO-LicenseManager/1.0");
+        request.Content = System.Net.Http.Json.JsonContent.Create(new {
+            from,
+            to = new[] { address },
+            subject = "Your MSUO Community Edition License",
+            text = "Thank you for registering for MSUO Community Edition.\\n\\nYour signed license key:\\n\\n" + license +
+                "\\n\\nKeep this key for your SDK installation.\\n\\nMSUO"
+        });
+        using var response = await factory.CreateClient().SendAsync(request, ct);
+        if (!response.IsSuccessStatusCode)
+            throw new HttpRequestException("Resend rejected the email request with status " + (int)response.StatusCode);
     }
 }
 
