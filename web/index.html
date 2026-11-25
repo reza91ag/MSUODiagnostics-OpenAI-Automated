@@ -42,7 +42,8 @@ dialog{border:0;border-radius:15px;padding:0;width:min(850px,94vw);box-shadow:0 
 .health-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:12px 20px 20px}
 .health-overview>div{padding:12px;background:#f4f8fa;border-radius:8px}
 .health-overview small{display:block;color:#5e7382}.health-overview strong{display:block;margin-top:5px;font-size:19px;color:#19364a}
-.health-detail-inner{padding:0 20px 20px}.health-sequence{display:flex;gap:3px;flex-wrap:wrap;margin:12px 0 20px}
+.health-detail-inner{padding:0 20px 20px}
+.health-sequence{display:flex;gap:3px;flex-wrap:wrap;align-content:flex-start;margin:12px 0 20px;max-height:min(12rem,40vh);overflow-y:auto;scrollbar-gutter:stable;overscroll-behavior-y:contain}
 .health-sequence i{width:10px;height:23px;border-radius:3px;background:#b8c8d2}
 .health-sequence i.anomaly{background:#d45a4d}
 .health-status-healthy{color:#17815b}.health-status-sporadic{color:#b57615}.health-status-localized{color:#c3473a}
@@ -76,7 +77,7 @@ dialog{border:0;border-radius:15px;padding:0;width:min(850px,94vw);box-shadow:0 
   <section class="panel" id="healthPanel">
     <div class="panel-head"><div><h2>Latency Health</h2><p>Request-distance and anomaly clustering · diagnostic signal, not root-cause attribution</p></div><button class="button" id="healthToggle" type="button" aria-expanded="false" aria-controls="healthDetails"><span id="healthBadge">Awaiting samples</span> <span id="healthChevron" aria-hidden="true">▾</span></button></div>
     <div class="health-overview"><div><small>Requests since last anomaly</small><strong id="healthDistance">—</strong></div><div><small>Anomalies detected / selected requests</small><strong id="healthCount">—</strong></div><div><small>Localization</small><strong id="healthLocalization">—</strong></div></div>
-    <div id="healthDetails" hidden><div class="health-detail-inner"><p class="muted">Selected requests, oldest to newest. Red indicates a detected latency anomaly.</p><div id="healthSequence" class="health-sequence"></div><h3>Affected operations</h3><div class="table-wrap"><table><thead><tr><th>Source</th><th>Operation</th><th>Configuration</th><th>Excluded</th><th>Requests</th><th>Rate</th><th>Concentration</th></tr></thead><tbody id="healthOperations"></tbody></table></div><p class="muted">Temporal cluster: at least 3 exclusions within 5 comparable requests (same operation, startup and persistence). Operational concentration: at least 3 exclusions among 5+ requests, at least half of anomalies, and an exclusion rate of at least 20% and twice that of other operations. Health anomalies are detected against each startup and persistence configuration separately; one overall health status aggregates the results. Statistics and exports retain the joint-filter outlier baseline. Based on all requests in the selected operations, configurations and average window; independent of the Ignore outliers display toggle.</p></div></div>
+    <div id="healthDetails" hidden><div class="health-detail-inner"><p class="muted">Selected requests, oldest to newest. Red indicates a detected latency anomaly.</p><div id="healthSequence" class="health-sequence" role="region" aria-label="Request anomaly timeline" tabindex="0"></div><h3>Affected operations</h3><div class="table-wrap"><table><thead><tr><th>Source</th><th>Operation</th><th>Configuration</th><th>Excluded</th><th>Requests</th><th>Rate</th><th>Concentration</th></tr></thead><tbody id="healthOperations"></tbody></table></div><p class="muted">Temporal cluster: at least 3 exclusions within 5 comparable requests (same operation, startup and persistence). Operational concentration: at least 3 exclusions among 5+ requests, at least half of anomalies, and an exclusion rate of at least 20% and twice that of other operations. Health anomalies are detected against each startup and persistence configuration separately; one overall health status aggregates the results. Statistics and exports retain the joint-filter outlier baseline. Based on all requests in the selected operations, configurations and average window; independent of the Ignore outliers display toggle.</p></div></div>
   </section>
   <section class="panel">
     <div class="panel-head"><div><h2>Lifecycle latency · Descending</h2><p>Momentary request vs rolling average, grouped by startup and persistence strategy</p><p id="sampleSummary"><!--INITIAL_SAMPLE_SUMMARY--></p></div><div class="legend"><span><i class="swatch" style="background:#3978a8"></i>Momentary</span><span><i class="swatch" style="background:#a4bdd0"></i>Average</span><span><i class="swatch" style="background:#138b82"></i>Fastest observed (marker)</span></div></div>
@@ -197,8 +198,10 @@ function renderHealth(health){
  $('healthDistance').textContent=health.requests_since_last_exclusion==null?'None observed':String(health.requests_since_last_exclusion);
  $('healthCount').textContent=health.recent_excluded+' / '+health.recent_requests;
  $('healthLocalization').textContent=health.temporal_cluster&&health.operational_cluster?'Temporal + operational':health.temporal_cluster?'Temporal':health.operational_cluster?'Operational':'None detected';
- const sequence=$('healthSequence');sequence.replaceChildren();
- for(const flag of health.sequence){const marker=dom('i');if(flag)marker.className='anomaly';marker.title=flag?'Excluded anomaly':'Normal request';sequence.append(marker);}
+ const sequence=$('healthSequence');const scrollTop=sequence.scrollTop;
+ const markers=document.createDocumentFragment();
+ for(const flag of health.sequence){const marker=dom('i');if(flag)marker.className='anomaly';marker.title=flag?'Excluded anomaly':'Normal request';markers.append(marker);}
+ sequence.replaceChildren(markers);sequence.scrollTop=scrollTop;
  const tbody=$('healthOperations');tbody.replaceChildren();
  for(const op of health.affected_operations){const tr=dom('tr');cell(tr,op.source);cell(tr,op.operation);cell(tr,op.startup+' / '+op.persistence);cell(tr,String(op.excluded));cell(tr,String(op.requests));cell(tr,op.rate_pct+'%');cell(tr,op.concentrated?'Concentrated':'Not concentrated');tbody.append(tr);}
  if(!health.affected_operations.length){const tr=dom('tr');const td=cell(tr,'No anomalies in selected requests.');td.colSpan=7;tbody.append(tr);}
