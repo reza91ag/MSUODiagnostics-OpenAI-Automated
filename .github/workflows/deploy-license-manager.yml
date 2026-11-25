@@ -49,6 +49,33 @@ jobs:
           $account = Get-Content (Join-Path $dir 'firebase-service-account.json') -Raw | ConvertFrom-Json
           if ($account.project_id -ne 'msuo-community-licensemanager') { throw 'Firebase project ID mismatch' }
           if ($env:MSUO_SIGNING_PRIVATE_KEY -notmatch 'BEGIN (RSA )?PRIVATE KEY') { throw 'Invalid MSUO signing key format' }
+      - name: Test ASP.NET startup directly on runner
+        shell: powershell
+        run: |
+          $env:GOOGLE_APPLICATION_CREDENTIALS = 'C:\MSUO\Secrets\firebase-service-account.json'
+          $env:SIGNING_PRIVATE_KEY_PATH = 'C:\MSUO\Secrets\MSUO_signing_private.pem'
+          $resend = Get-Content 'C:\MSUO\Secrets\resend.json' -Raw | ConvertFrom-Json
+          $env:RESEND_API_KEY = $resend.'Mail-Service'.Token
+          $env:RESEND_FROM = $resend.From
+          $env:FIREBASE_PROJECT_ID = 'msuo-community-licensemanager'
+          $env:BIND_URL = 'http://127.0.0.1:5107'
+          $dll = Join-Path $env:RUNNER_TEMP 'msuo-license-publish\MSUO.LicenseManager.dll'
+          $logOut = Join-Path $env:RUNNER_TEMP 'license-direct.stdout.log'
+          $logErr = Join-Path $env:RUNNER_TEMP 'license-direct.stderr.log'
+          $process = Start-Process -FilePath 'dotnet.exe' -ArgumentList ('"' + $dll + '"') -PassThru -WindowStyle Hidden -RedirectStandardOutput $logOut -RedirectStandardError $logErr
+          try {
+            Start-Sleep -Seconds 7
+            if ($process.HasExited) { Write-Host "Direct startup process exited: $($process.ExitCode)" }
+            Write-Host 'Direct stdout:'
+            if (Test-Path $logOut) { Get-Content $logOut -Tail 35 }
+            Write-Host 'Direct stderr:'
+            if (Test-Path $logErr) { Get-Content $logErr -Tail 35 }
+            $response = Invoke-WebRequest 'http://127.0.0.1:5107/health' -UseBasicParsing -TimeoutSec 5
+            if ($response.StatusCode -ne 200) { throw 'Direct ASP.NET health check failed' }
+            Write-Host 'Direct application health check passed'
+          } finally {
+            if (-not $process.HasExited) { Stop-Process -Id $process.Id -Force }
+          }
       - name: Deploy and install startup task
         shell: powershell
         run: |
