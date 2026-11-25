@@ -11,9 +11,27 @@ builder.WebHost.UseUrls(builder.Configuration["BIND_URL"] ?? "http://127.0.0.1:5
 builder.Services.AddProblemDetails();
 builder.Services.AddRateLimiter(options => {
     options.RejectionStatusCode = 429;
-    options.AddPolicy("register", ctx => RateLimitPartition.GetFixedWindowLimiter(
-        ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-        _ => new FixedWindowRateLimiterOptions { PermitLimit = 5, Window = TimeSpan.FromMinutes(15), QueueLimit = 0, AutoReplenishment = true }));
+    options.OnRejected = async (context, ct) => {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        context.HttpContext.Response.ContentType = "application/json";
+        context.HttpContext.Response.Headers.RetryAfter = "900";
+        await context.HttpContext.Response.WriteAsJsonAsync(
+            new { error = "Too many registration attempts. Please try again in 15 minutes." }, cancellationToken: ct);
+    };
+    options.AddPolicy("register", ctx => {
+        // Cloudflare Tunnel connects to Kestrel from loopback; the socket IP alone
+        // would incorrectly count every visitor as one user.
+        var tunnelIp = ctx.Request.Headers["CF-Connecting-IP"].FirstOrDefault();
+        var visitorIp = System.Net.IPAddress.TryParse(tunnelIp, out var parsed)
+            ? parsed.ToString()
+            : (ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown");
+        return RateLimitPartition.GetFixedWindowLimiter(
+            visitorIp,
+            _ => new FixedWindowRateLimiterOptions {
+                PermitLimit = 5, Window = TimeSpan.FromMinutes(15),
+                QueueLimit = 0, AutoReplenishment = true
+            });
+    });
 });
 
 var projectId = builder.Configuration["FIREBASE_PROJECT_ID"] ?? "msuo-community-licensemanager";
