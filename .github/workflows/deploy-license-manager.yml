@@ -1,4 +1,5 @@
 name: Deploy MSUO License Manager (IONOS Windows)
+# Deployment re-trigger after repository credential provisioning
 on:
   workflow_dispatch:
   push:
