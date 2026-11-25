@@ -120,8 +120,8 @@ public sealed class LicenseMailer(IConfiguration config, IHttpClientFactory fact
             subject = "MSUO™ Application Orchestration Kernel — Your Community Edition License",
             html,
             text,
-            attachments = new [] {
-                new { filename, content = Convert.ToBase64String(Encoding.UTF8.GetBytes(license)), content_type = "application/octet-stream", content_id = "" },
+            attachments = new object[] {
+                new { filename, content = Convert.ToBase64String(Encoding.UTF8.GetBytes(license)), content_type = "application/octet-stream" },
                 new { filename = "msuo-logo.png", content = logoBase64, content_type = "image/png", content_id = "msuo-kernel-logo" }
             }
         });
