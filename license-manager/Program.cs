@@ -53,6 +53,10 @@ app.UseStaticFiles();
 app.UseRateLimiter();
 
 app.MapGet("/health", () => Results.Ok(new { status = "running" }));
+// Stable public PNG endpoint for email clients that do not support CID inline attachments.
+app.MapGet("/msuo-email-logo.png", () => Results.File(
+    Convert.FromBase64String(EmailLogo.PngBase64), "image/png"));
+
 app.MapPost("/api/register", async (RegistrationInput input, FirestoreDb db, LicenseSigner signer, LicenseMailer mailer, ILogger<Program> log, CancellationToken ct) => {
     // No passwords, no Firebase Authentication and no browser Firebase API key.
     if (string.IsNullOrWhiteSpace(input.Email) || input.Email.Length > 254)
@@ -83,6 +87,10 @@ app.MapPost("/api/register", async (RegistrationInput input, FirestoreDb db, Lic
 
 app.Run();
 
+public static class EmailLogo {
+    public const string PngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAKAAAACSBAMAAAAwU9y4AAAAMFBMVEVZYJ4AAABZaohZaolZaYhYaYlYZ4pZaohZaohYaohjY40AAP9ZcoyAgIBAgIBVVYDpPC9VAAAAEHRSTlMIAP62bcsULk+NBwEKAgQGQGcWZwAABN9JREFUeNrtWl1oW2UYfs53mhObbl0OKAXFLYahY960hoL1wlUYUpxKHCt2FIa7GTh/KHMlY1KxXrkbDbuSzosDu1IYHsEL2YJT/AGVwgG96DaIuVzB0TKnrj8xXiyJJ8n7fj8nx+lGzk3Ll6/P+zzv977P9yap5SLeR6AH2APsAd7tgFfz9Pq3zP68AtA5SK8nDtHrZwM5YOrRgH7h1VU6zlsKyRMVev2mJ43Tx+ElLzKCH6IJLo3JD2XgJMwEv6w45YNFen2JE9xIOCP5pychJ8II5hg6r0NBhI1DA74SRBTMAF73zARPefLWS+4wFLws7+V+rmKmPI04BOA0UzHOMr3+gSd3m7PnGILMSTkfye2r3uMqImwcodla7USaz+ee3GD3e4aCT8kd21mBHhE2Titg/5tMi3QQqT+nPfmdwlUMK/gT+SXFVsxpTzuO3R+qmMWbrS9mlupEfr8aXrb+bJyg37L9ntU2hlzFgLmuyBMU6lbF/opBHKFsVbaU6DjNK2DrTqZiUo8EJnGaDF+smN3P3BzQAEyeMxTMzQF1wMT9hgOJc1E+fbEVwwqWj3Nc67MDCSe4Dsi1PlBl1n+RD5ybwR03EufcN+IEfHClVJ4fjhHwOoCNyv85h5luAPtiIDU0/dl4qigBNKxKe2kO34/EncNxGeAWholbyB5RticleQ1AItMhfLN8AosjlQinXM1mszs6E5lqkdb2pnFVxrBGm7QVd2Gvcy+kwwxbAO2RoWN8D1tapxyWbP36Bebmzb3xviNuicyhAADfnOGHAIq3xRyqzWTk3ELn1o13szuf8qKYw7ZKCXOd7VI7BVwzK5sgfP5x+OHbIX2x+GF6cML9AchUumDYAvipfaH5+3AQg+RoBqvZy3HeeoOS/TltQHfo2MMzdYMt5B5/hyif2QN7Vr7WPRRRxhx2131qAbhE+dcZoKbLMPFfTV/aDNehbjuvm9bjng0jQMUIlzFhqJ3LYZNetuV7g0nXLQWagNXBCTd9vtFvufJL7xOXSqltNnnBckvPt30IYLkAxLaWtQd+BhJbAOzx+7ZSabqGkcqtn4CVDjk9k7sb3cyNIsqtHu6uosYllakAfyRD4AcAXGFO48sII/HAAoDDAT3spHUdO1Rvv92utxVCydB2C9nD9ZE46hXQ2inlEwgGsQYM7PtR/bfVXdP+3vMah1LdWw0u6LBZfg8LUoabtxZqi/+yY6ci5zBBe/xfkwaHpFPYa6Woktd1biEjhpOu+9WlGAFrJXT93NnfPArmZn+M2Z9XANrPpcn15D56/2hRAVhgCE7N0HEWFJKdWRkRIk5GDmiNQUaEjcMCHvKlRNg4HOC9xUiCWUBxhknEUVUc2m3sZ8eZROTpOClFYc96ZoJDCScBRwtQEWHjkN88MonCdl+dWApwKs8QYcab7Xk5IFcxrOBA7jbOFUPBKbl9cS3HC/blgLuZlrM+ZqbOQG6wo99wgmlztC7LHTv5DPSIsHFaAe2JGUbwE7pxhJZJY5evG0fomDQS39HrJ30pIFsxrODj8muUM2mKCBtHqFsOznGDOEJp0mwm6Djin2udMWm85pvEESqThjNvFEcoTBr2mFkcoTBpzPpGcRqAnEnDKRjFaQCyFdPHEHm6wI4wLgBnPeaBM0a83r8L9gDvTsC/Aa2eK9LUw4SxAAAAAElFTkSuQmCC";
+}
+
 public sealed record RegistrationInput(string Email);
 
 public sealed class LicenseMailer(IConfiguration config, IHttpClientFactory factory) {
@@ -90,8 +98,6 @@ public sealed class LicenseMailer(IConfiguration config, IHttpClientFactory fact
         var apiKey = config["RESEND_API_KEY"] ?? throw new InvalidOperationException("RESEND_API_KEY not configured.");
         var from = config["RESEND_FROM"] ?? throw new InvalidOperationException("RESEND_FROM not configured.");
 
-        // Blue (#596A89), transparent PNG converted from the official MSUO logo, embedded via Resend Content-ID for email clients.
-        const string logoBase64 = "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";
         var filename = "MSUO-Community-Edition.msuolicense";
         var html = """
 <!DOCTYPE html>
@@ -102,7 +108,7 @@ public sealed class LicenseMailer(IConfiguration config, IHttpClientFactory fact
 <tr><td align="center">
 <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:620px;border:1px solid #e0e5ed;border-radius:18px;background:#ffffff;overflow:hidden;">
 <tr><td align="center" style="padding:36px 32px 15px;">
-<img alt="MSUO" width="90" height="82" src="cid:msuo-kernel-logo" style="display:block;width:90px;height:82px;object-fit:contain;margin:0 auto 12px;">
+<img alt="MSUO" width="90" height="82" src="https://license.msuo-runtime.io/msuo-email-logo.png" style="display:block;width:90px;height:82px;object-fit:contain;margin:0 auto 12px;">
 <div style="font-size:13px;letter-spacing:2px;font-weight:700;color:#596a89;">MSUO™ APPLICATION ORCHESTRATION KERNEL</div>
 </td></tr>
 <tr><td style="padding:12px 36px 34px;">
@@ -138,10 +144,7 @@ public sealed class LicenseMailer(IConfiguration config, IHttpClientFactory fact
             subject = "MSUO™ Application Orchestration Kernel — Your Community Edition License",
             html,
             text,
-            attachments = new object[] {
-                new { filename, content = Convert.ToBase64String(Encoding.UTF8.GetBytes(license)), content_type = "application/octet-stream" },
-                new { filename = "msuo-logo.png", content = logoBase64, content_type = "image/png", content_id = "msuo-kernel-logo" }
-            }
+            attachments = new[] { new { filename, content = Convert.ToBase64String(Encoding.UTF8.GetBytes(license)), content_type = "application/octet-stream" } }
         });
         using var response=await factory.CreateClient().SendAsync(request,ct);
         if(!response.IsSuccessStatusCode)
