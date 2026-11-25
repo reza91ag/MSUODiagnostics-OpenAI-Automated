@@ -1,4 +1,5 @@
 name: Diagnose License Firestore Status
+# Post-422 registration delivery audit
 on:
   workflow_dispatch:
   push:
