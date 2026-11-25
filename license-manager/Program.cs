@@ -71,19 +71,62 @@ public sealed class LicenseMailer(IConfiguration config, IHttpClientFactory fact
     public async Task SendAsync(string address, string license, CancellationToken ct) {
         var apiKey = config["RESEND_API_KEY"] ?? throw new InvalidOperationException("RESEND_API_KEY not configured.");
         var from = config["RESEND_FROM"] ?? throw new InvalidOperationException("RESEND_FROM not configured.");
-        using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.resend.com/emails");
-        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+
+        // Existing official MSUO logo from the observatory assets.
+        var logoUrl = "https://diagnostics.msuo-runtime.io/msuo-logo.svg";
+        var filename = "MSUO-Community-Edition.msuolicense";
+        var html = """
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background-color:#f2f5f9;font-family:Arial,Helvetica,sans-serif;color:#19243a;">
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f2f5f9;padding:36px 12px;">
+<tr><td align="center">
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:620px;border:1px solid #e0e5ed;border-radius:18px;background:#ffffff;overflow:hidden;">
+<tr><td align="center" style="padding:36px 32px 15px;">
+<img alt="MSUO" width="90" height="82" src="{{LOGO_URL}}" style="display:block;width:90px;height:82px;object-fit:contain;margin:0 auto 12px;">
+<div style="font-size:13px;letter-spacing:2px;font-weight:700;color:#596a89;">META-SCHEMA UNIVERSAL ORCHESTRATION</div>
+</td></tr>
+<tr><td style="padding:12px 36px 34px;">
+<h1 style="margin:4px 0 18px;font-size:28px;line-height:1.25;color:#111827;">Welcome to MSUO™</h1>
+<p style="font-size:16px;line-height:1.7;color:#435169;margin:0 0 20px;">Your <strong>Community Edition</strong> license has been issued and is attached to this email.</p>
+<table role="presentation" width="100%" style="background:#f6f8fc;border:1px solid #dbe3f0;border-radius:12px;">
+<tr><td style="padding:20px 22px;">
+<div style="font-size:12px;font-weight:700;letter-spacing:1px;color:#64748b;">YOUR LICENSE FILE</div>
+<div style="font-size:16px;font-weight:700;color:#1b3358;padding-top:10px;overflow-wrap:anywhere;">MSUO-Community-Edition.msuolicense</div>
+<p style="font-size:14px;line-height:1.65;color:#4a5970;margin:12px 0 0;">Please download the attachment and <strong>keep it in a safe place</strong>. You may need it when configuring the MSUO SDK or restoring your development environment.</p>
+</td></tr></table>
+<p style="margin:26px 0 8px;font-size:17px;font-weight:700;color:#182641;">Enjoy the new developer experience.</p>
+<p style="font-size:15px;color:#435169;line-height:1.6;margin:0 0 22px;">Build freely, experiment, and explore a different approach to application architecture.</p>
+<p style="font-size:15px;line-height:1.6;color:#435169;margin:0;">Best regards,<br><strong>The MSUO Team</strong></p>
+</td></tr>
+<tr><td style="padding:22px 36px;background:#f8fafc;border-top:1px solid #e6ebf2;text-align:center;color:#7a889e;font-size:12px;">MSUO™ Community Edition &middot; msuo-runtime.io</td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>
+""".Replace("{{LOGO_URL}}",logoUrl);
+
+        var text = "Welcome to MSUO Community Edition\n\n"
+            + "Your signed Community Edition license file is attached: " + filename + "\n\n"
+            + "Please keep this file in a safe place. You may need it for SDK setup or restoring your development environment.\n\n"
+            + "Enjoy the new developer experience.\n\nBest regards,\nThe MSUO Team";
+        using var request = new HttpRequestMessage(HttpMethod.Post,"https://api.resend.com/emails");
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer",apiKey);
         request.Headers.UserAgent.ParseAdd("MSUO-LicenseManager/1.0");
         request.Content = System.Net.Http.Json.JsonContent.Create(new {
             from,
             to = new[] { address },
-            subject = "Your MSUO Community Edition License",
-            text = "Thank you for registering for MSUO Community Edition.\\n\\nYour signed license key:\\n\\n" + license +
-                "\\n\\nKeep this key for your SDK installation.\\n\\nMSUO"
+            subject = "Welcome to MSUO — Your Community Edition License",
+            html,
+            text,
+            attachments = new [] {
+                new { filename, content = Convert.ToBase64String(Encoding.UTF8.GetBytes(license)) }
+            }
         });
-        using var response = await factory.CreateClient().SendAsync(request, ct);
-        if (!response.IsSuccessStatusCode)
-            throw new HttpRequestException("Resend rejected the email request with status " + (int)response.StatusCode);
+        using var response=await factory.CreateClient().SendAsync(request,ct);
+        if(!response.IsSuccessStatusCode)
+            throw new HttpRequestException("Resend rejected the license email with HTTP " + (int)response.StatusCode);
     }
 }
 
