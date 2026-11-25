@@ -67,7 +67,7 @@ jobs:
           $env:FIREBASE_PROJECT_ID = 'msuo-community-licensemanager'
           $env:BIND_URL = 'http://127.0.0.1:5107'
           Set-Location 'C:\MSUO\LicenseManager'
-          & dotnet 'C:\MSUO\LicenseManager\MSUO.LicenseManager.dll'
+          & dotnet 'C:\MSUO\LicenseManager\MSUO.LicenseManager.dll' *> 'C:\MSUO\LicenseManager\startup.log'
           '@
           Set-Content -Path "$target\start.ps1" -Value $launcher -Encoding UTF8
           $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$target\start.ps1`""
@@ -75,6 +75,20 @@ jobs:
           $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Seconds 0) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
           Register-ScheduledTask -TaskName 'MSUO-LicenseManager' -Action $action -Trigger $trigger -Settings $settings -User 'SYSTEM' -RunLevel Highest -Force | Out-Null
           Start-ScheduledTask -TaskName 'MSUO-LicenseManager'
-          Start-Sleep -Seconds 8
-          $response = Invoke-WebRequest 'http://127.0.0.1:5107/health' -UseBasicParsing -TimeoutSec 10
-          if ($response.StatusCode -ne 200) { throw "Health check failed" }
+          $healthy = $false
+          for ($i=0; $i -lt 12; $i++) {
+            Start-Sleep -Seconds 2
+            try {
+              $response = Invoke-WebRequest 'http://127.0.0.1:5107/health' -UseBasicParsing -TimeoutSec 2
+              if ($response.StatusCode -eq 200) { $healthy = $true; break }
+            } catch { }
+          }
+          if (-not $healthy) {
+            Write-Host "License Manager failed to answer /health"
+            Get-ScheduledTaskInfo -TaskName 'MSUO-LicenseManager' | Format-List *
+            Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*MSUO.LicenseManager*' } | Select-Object ProcessId,Name,CommandLine | Format-Table -AutoSize
+            if (Test-Path "$target\startup.log") {
+              Get-Content "$target\startup.log" -Tail 60
+            } else { Write-Host "No startup log created" }
+            throw "MSUO License Manager health check failed"
+          }
