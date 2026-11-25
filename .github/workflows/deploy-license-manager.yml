@@ -29,21 +29,14 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed" }
       - name: Check prerequisite credentials
         shell: powershell
-        env:
-          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: |
-          if ([string]::IsNullOrWhiteSpace($env:RESEND_API_KEY)) { throw 'GitHub Actions secret RESEND_API_KEY is missing' }
           $required = @('C:\MSUO\Secrets\firebase-service-account.json', 'C:\MSUO\Secrets\MSUO_signing_private.pem')
           foreach ($p in $required) {
             if (!(Test-Path -LiteralPath $p)) { throw "Missing private server credential: $p. Do not commit credentials to GitHub." }
           }
       - name: Deploy and install startup task
         shell: powershell
-        env:
-          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: |
-          $resendConfig = @{ 'Mail-Service' = @{ Provider = 'Resend'; Token = $env:RESEND_API_KEY }; From = 'MSUO <license@msuo-runtime.io>' } | ConvertTo-Json -Depth 4
-          Set-Content -Path 'C:\MSUO\Secrets\resend.json' -Value $resendConfig -Encoding UTF8
           $target = 'C:\MSUO\LicenseManager'
           New-Item -Force -ItemType Directory $target | Out-Null
           $old = Get-ScheduledTask -TaskName 'MSUO-LicenseManager' -ErrorAction SilentlyContinue
