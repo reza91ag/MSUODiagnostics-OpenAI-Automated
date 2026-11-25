@@ -27,13 +27,27 @@ jobs:
           dotnet --info
           dotnet publish .\license-manager\MSUO.LicenseManager.csproj -c Release -o "$env:RUNNER_TEMP\msuo-license-publish"
           if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed" }
-      - name: Check prerequisite credentials
+      - name: Provision license credentials on IONOS server
         shell: powershell
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          MSUO_SIGNING_PRIVATE_KEY: ${{ secrets.MSUO_SIGNING_PRIVATE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: |
-          $required = @('C:\MSUO\Secrets\firebase-service-account.json', 'C:\MSUO\Secrets\MSUO_signing_private.pem')
-          foreach ($p in $required) {
-            if (!(Test-Path -LiteralPath $p)) { throw "Missing private server credential: $p. Do not commit credentials to GitHub." }
+          foreach ($name in @('FIREBASE_SERVICE_ACCOUNT_JSON','MSUO_SIGNING_PRIVATE_KEY','RESEND_API_KEY')) {
+            if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($name))) {
+              throw "Missing GitHub Actions repository secret: $name"
+            }
           }
+          $dir = 'C:\MSUO\Secrets'
+          New-Item -ItemType Directory -Path $dir -Force | Out-Null
+          [System.IO.File]::WriteAllText((Join-Path $dir 'firebase-service-account.json'), $env:FIREBASE_SERVICE_ACCOUNT_JSON, (New-Object System.Text.UTF8Encoding($false)))
+          [System.IO.File]::WriteAllText((Join-Path $dir 'MSUO_signing_private.pem'), $env:MSUO_SIGNING_PRIVATE_KEY, (New-Object System.Text.UTF8Encoding($false)))
+          $resend = @{ 'Mail-Service' = @{ Provider = 'Resend'; Token = $env:RESEND_API_KEY }; From = 'MSUO <license@msuo-runtime.io>' }
+          [System.IO.File]::WriteAllText((Join-Path $dir 'resend.json'), ($resend | ConvertTo-Json -Depth 4), (New-Object System.Text.UTF8Encoding($false)))
+          $account = Get-Content (Join-Path $dir 'firebase-service-account.json') -Raw | ConvertFrom-Json
+          if ($account.project_id -ne 'msuo-community-licensemanager') { throw 'Firebase project ID mismatch' }
+          if ($env:MSUO_SIGNING_PRIVATE_KEY -notmatch 'BEGIN (RSA )?PRIVATE KEY') { throw 'Invalid MSUO signing key format' }
       - name: Deploy and install startup task
         shell: powershell
         run: |
