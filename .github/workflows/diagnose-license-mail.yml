@@ -22,8 +22,7 @@ jobs:
           try {
             $logoUrl = 'https://license.msuo-runtime.io/msuo-email-logo.png'
             $logo = Invoke-WebRequest $logoUrl -UseBasicParsing -TimeoutSec 12
-            $bytes = $logo.Content
-            if ($bytes -is [string]) { $bytes = [System.Text.Encoding]::Latin1.GetBytes($bytes) }
+            $bytes = $logo.RawContentStream.ToArray()
             $isPng = $bytes.Length -gt 8 -and $bytes[0] -eq 137 -and $bytes[1] -eq 80 -and $bytes[2] -eq 78 -and $bytes[3] -eq 71
             Write-Host "Public MSUO PNG status: $($logo.StatusCode) Content-Type: $($logo.Headers['Content-Type']) Bytes: $($bytes.Length) PNG signature: $isPng"
             if ($logo.StatusCode -ne 200 -or !$isPng) { throw 'Public PNG logo validation failed' }
