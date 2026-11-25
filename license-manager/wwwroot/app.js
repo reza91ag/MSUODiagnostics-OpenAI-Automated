@@ -3,7 +3,7 @@ form.addEventListener('submit',async event=>{
  event.preventDefault();
  button.disabled=true;msg.textContent='Submitting…';
  try {
-  const response=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:document.getElementById('email').value.trim()})});
+  const response=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:document.getElementById('email').value.trim(),edition:'DeveloperPreview'})});
   const raw=await response.text();
   let body={};
   try { body=JSON.parse(raw); } catch {}

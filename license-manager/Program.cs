@@ -57,6 +57,9 @@ app.MapGet("/health", () => Results.Ok(new { status = "running" }));
 app.MapGet("/msuo-email-logo.png", () => Results.File(
     Convert.FromBase64String(EmailLogo.PngBase64), "image/png"));
 
+app.MapGet("/CommunityEdition", () => Results.File(Path.Combine(app.Environment.WebRootPath, "community.html"), "text/html"));
+app.MapGet("/DeveloperPreview", () => Results.File(Path.Combine(app.Environment.WebRootPath, "preview.html"), "text/html"));
+app.MapGet("/preview", () => Results.Redirect("/DeveloperPreview"));
 app.MapPost("/api/register", async (RegistrationInput input, FirestoreDb db, LicenseSigner signer, LicenseMailer mailer, ILogger<Program> log, CancellationToken ct) => {
     // No passwords, no Firebase Authentication and no browser Firebase API key.
     if (string.IsNullOrWhiteSpace(input.Email) || input.Email.Length > 254)
@@ -69,10 +72,12 @@ app.MapPost("/api/register", async (RegistrationInput input, FirestoreDb db, Lic
 
     // Deterministic document ID enforces case-insensitive uniqueness, even under concurrent signups.
     var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(email))).ToLowerInvariant();
-    var doc = db.Collection("CommunityEdition").Document(hash);
-    var license = signer.Issue(hash, email);
+    if (input.Edition != "DeveloperPreview") return Results.BadRequest(new { error = "Community Edition is coming soon." });
+    const string edition = "DeveloperPreview";
+    var doc = db.Collection(edition).Document(hash);
+    var license = signer.Issue(hash, email, edition);
     var record = new Dictionary<string, object> {
-        ["email"] = email, ["emailHash"] = hash, ["edition"] = "CommunityEdition",
+        ["email"] = email, ["emailHash"] = hash, ["edition"] = edition,
         ["licenseKey"] = license, ["issuedAt"] = Timestamp.GetCurrentTimestamp(),
         ["deliveryStatus"] = "pending", ["deliveryAttempts"] = 0, ["schemaVersion"] = 1
     };
@@ -91,14 +96,15 @@ public static class EmailLogo {
     public const string PngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAKAAAACSBAMAAAAwU9y4AAAAMFBMVEVZYJ4AAABZaohZaolZaYhYaYlYZ4pZaohZaohYaohjY40AAP9ZcoyAgIBAgIBVVYDpPC9VAAAAEHRSTlMIAP62bcsULk+NBwEKAgQGQGcWZwAABN9JREFUeNrtWl1oW2UYfs53mhObbl0OKAXFLYahY960hoL1wlUYUpxKHCt2FIa7GTh/KHMlY1KxXrkbDbuSzosDu1IYHsEL2YJT/AGVwgG96DaIuVzB0TKnrj8xXiyJJ8n7fj8nx+lGzk3Ll6/P+zzv977P9yap5SLeR6AH2APsAd7tgFfz9Pq3zP68AtA5SK8nDtHrZwM5YOrRgH7h1VU6zlsKyRMVev2mJ43Tx+ElLzKCH6IJLo3JD2XgJMwEv6w45YNFen2JE9xIOCP5pychJ8II5hg6r0NBhI1DA74SRBTMAF73zARPefLWS+4wFLws7+V+rmKmPI04BOA0UzHOMr3+gSd3m7PnGILMSTkfye2r3uMqImwcodla7USaz+ee3GD3e4aCT8kd21mBHhE2Titg/5tMi3QQqT+nPfmdwlUMK/gT+SXFVsxpTzuO3R+qmMWbrS9mlupEfr8aXrb+bJyg37L9ntU2hlzFgLmuyBMU6lbF/opBHKFsVbaU6DjNK2DrTqZiUo8EJnGaDF+smN3P3BzQAEyeMxTMzQF1wMT9hgOJc1E+fbEVwwqWj3Nc67MDCSe4Dsi1PlBl1n+RD5ybwR03EufcN+IEfHClVJ4fjhHwOoCNyv85h5luAPtiIDU0/dl4qigBNKxKe2kO34/EncNxGeAWholbyB5RticleQ1AItMhfLN8AosjlQinXM1mszs6E5lqkdb2pnFVxrBGm7QVd2Gvcy+kwwxbAO2RoWN8D1tapxyWbP36Bebmzb3xviNuicyhAADfnOGHAIq3xRyqzWTk3ELn1o13szuf8qKYw7ZKCXOd7VI7BVwzK5sgfP5x+OHbIX2x+GF6cML9AchUumDYAvipfaH5+3AQg+RoBqvZy3HeeoOS/TltQHfo2MMzdYMt5B5/hyif2QN7Vr7WPRRRxhx2131qAbhE+dcZoKbLMPFfTV/aDNehbjuvm9bjng0jQMUIlzFhqJ3LYZNetuV7g0nXLQWagNXBCTd9vtFvufJL7xOXSqltNnnBckvPt30IYLkAxLaWtQd+BhJbAOzx+7ZSabqGkcqtn4CVDjk9k7sb3cyNIsqtHu6uosYllakAfyRD4AcAXGFO48sII/HAAoDDAT3spHUdO1Rvv92utxVCydB2C9nD9ZE46hXQ2inlEwgGsQYM7PtR/bfVXdP+3vMah1LdWw0u6LBZfg8LUoabtxZqi/+yY6ci5zBBe/xfkwaHpFPYa6Woktd1biEjhpOu+9WlGAFrJXT93NnfPArmZn+M2Z9XANrPpcn15D56/2hRAVhgCE7N0HEWFJKdWRkRIk5GDmiNQUaEjcMCHvKlRNg4HOC9xUiCWUBxhknEUVUc2m3sZ8eZROTpOClFYc96ZoJDCScBRwtQEWHjkN88MonCdl+dWApwKs8QYcab7Xk5IFcxrOBA7jbOFUPBKbl9cS3HC/blgLuZlrM+ZqbOQG6wo99wgmlztC7LHTv5DPSIsHFaAe2JGUbwE7pxhJZJY5evG0fomDQS39HrJ30pIFsxrODj8muUM2mKCBtHqFsOznGDOEJp0mwm6Djin2udMWm85pvEESqThjNvFEcoTBr2mFkcoTBpzPpGcRqAnEnDKRjFaQCyFdPHEHm6wI4wLgBnPeaBM0a83r8L9gDvTsC/Aa2eK9LUw4SxAAAAAElFTkSuQmCC";
 }
 
-public sealed record RegistrationInput(string Email);
+public sealed record RegistrationInput(string Email, string? Edition = null);
 
 public sealed class LicenseMailer(IConfiguration config, IHttpClientFactory factory) {
-    public async Task SendAsync(string address, string license, CancellationToken ct) {
+    public async Task SendAsync(string address, string license, string edition, CancellationToken ct) {
         var apiKey = config["RESEND_API_KEY"] ?? throw new InvalidOperationException("RESEND_API_KEY not configured.");
         var from = config["RESEND_FROM"] ?? throw new InvalidOperationException("RESEND_FROM not configured.");
 
         var filename = "MSUO-Community-Edition.msuolicense";
+        var preview = edition == "DeveloperPreview";
         var html = """
 <!DOCTYPE html>
 <html lang="en">
@@ -135,13 +141,18 @@ public sealed class LicenseMailer(IConfiguration config, IHttpClientFactory fact
             + "Your signed Community Edition license file is attached: " + filename + "\n\n"
             + "Please keep this file in a safe place. You may need it for SDK setup or restoring your development environment.\n\n"
             + "Enjoy the new developer experience.\n\nBest regards,\nThe MSUO Team";
+        if (preview) {
+            html = html.Replace("Community Edition", "Developer Preview").Replace("Community-Edition", "Developer-Preview");
+            text = text.Replace("Community Edition", "Developer Preview").Replace("Community-Edition", "Developer-Preview");
+            filename = filename.Replace("Community-Edition", "Developer-Preview");
+        }
         using var request = new HttpRequestMessage(HttpMethod.Post,"https://api.resend.com/emails");
         request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer",apiKey);
         request.Headers.UserAgent.ParseAdd("MSUO-LicenseManager/1.0");
         request.Content = System.Net.Http.Json.JsonContent.Create(new {
             from,
             to = new[] { address },
-            subject = "MSUO™ Application Orchestration Kernel — Your Community Edition License",
+            subject = "MSUO™ Application Orchestration Kernel — Your " + (preview ? "Developer Preview" : "Community Edition") + " License",
             html,
             text,
             attachments = new[] { new { filename, content = Convert.ToBase64String(Encoding.UTF8.GetBytes(license)), content_type = "application/octet-stream" } }
@@ -163,7 +174,8 @@ public sealed class PendingMailWorker(FirestoreDb db, LicenseMailer mailer, ILog
     protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
         while (!stoppingToken.IsCancellationRequested) {
             try {
-                var docs = await db.Collection("CommunityEdition")
+                foreach (var edition in new[] { "CommunityEdition", "DeveloperPreview" }) {
+                var docs = await db.Collection(edition)
                     .WhereEqualTo("deliveryStatus", "pending")
                     .Limit(25).GetSnapshotAsync(stoppingToken);
                 foreach (var record in docs.Documents) {
@@ -175,11 +187,12 @@ public sealed class PendingMailWorker(FirestoreDb db, LicenseMailer mailer, ILog
                             ["deliveryAttempts"] = attempts + 1,
                             ["lastAttemptAt"] = Timestamp.GetCurrentTimestamp()
                         }, cancellationToken: stoppingToken);
-                        await mailer.SendAsync(record.GetValue<string>("email"), record.GetValue<string>("licenseKey"), stoppingToken);
+                        await mailer.SendAsync(record.GetValue<string>("email"), record.GetValue<string>("licenseKey"), edition, stoppingToken);
                         await record.Reference.UpdateAsync(new Dictionary<string, object> {
                             ["deliveryStatus"] = "sent", ["sentAt"] = Timestamp.GetCurrentTimestamp()
                         }, cancellationToken: stoppingToken);
                     } catch (Exception ex) { log.LogWarning(ex, "Queued license delivery failed."); }
+                }
                 }
             } catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
               catch (Exception ex) { log.LogError(ex, "Email queue processing failed."); }
