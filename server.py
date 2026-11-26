@@ -279,12 +279,13 @@ def extract_events(text, source, filename, operation_mappings=()):
     return events
 
 
-def read_log(path):
+def read_log(path, max_bytes=MAX_FILE_BYTES):
+    """Read a log, optionally limiting the read to its most recent bytes."""
     with open(path, "rb") as f:
         f.seek(0, os.SEEK_END)
         size = f.tell()
-        if size > MAX_FILE_BYTES:
-            f.seek(-MAX_FILE_BYTES, os.SEEK_END)
+        if max_bytes is not None and size > max_bytes:
+            f.seek(-max_bytes, os.SEEK_END)
             f.readline()  # discard truncated leading line
         else:
             f.seek(0)
@@ -327,7 +328,8 @@ def parse_file_cached(file, src, operation_mappings=()):
         cached = FILE_CACHE.get(cache_key)
         if cached and cached[:2] == signature:
             return cached[2]
-    parsed = extract_events(read_log(file), src, file.name, operation_mappings)
+    # The dashboard counts every retained lifecycle, including older requests.
+    parsed = extract_events(read_log(file, max_bytes=None), src, file.name, operation_mappings)
     with FILE_CACHE_LOCK:
         if len(FILE_CACHE) > 1500:
             FILE_CACHE.clear()

@@ -233,6 +233,10 @@ Request Lifecycle Completed succesfully! | TimeNow: 2026-11-20 12:00:02.000 | Fi
             target.write_text(sample)
             self.assertEqual(len(server.parse_file_cached(target, source)), 1)
             target.write_text(sample + sample.replace("12:00:02.000", "12:00:04.000").replace("12:00:00.000", "12:00:03.000"))
+            # A recent-only reader sees one lifecycle here. The dashboard scan
+            # must also retain the earlier one when the log grows.
+            tail = server.read_log(target, max_bytes=len(sample.encode("utf-8")) + 1)
+            self.assertEqual(len(server.extract_events(tail, source, target.name)), 1)
             self.assertEqual(len(server.parse_file_cached(target, source)), 2)
 
     def test_extensionless_watchdog_log_discovered_from_folder(self):
