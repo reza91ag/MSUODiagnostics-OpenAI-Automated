@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 using System.Text.Json;
 using System.Threading.RateLimiting;
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions { Args = args, ContentRootPath = AppContext.BaseDirectory });
 builder.WebHost.UseUrls(builder.Configuration["BIND_URL"] ?? "http://127.0.0.1:5107");
 builder.Services.AddProblemDetails();
 builder.Services.AddRateLimiter(options => {
@@ -51,7 +51,8 @@ builder.Services.AddSingleton(new LicenseSigner(File.ReadAllText(keyPath)));
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton(new EulaAgreement(Path.Combine(AppContext.BaseDirectory, "wwwroot", "eula", EulaAgreement.Version)));
 builder.Services.AddSingleton<LicenseMailer>();
-builder.Services.AddHostedService<PendingMailWorker>();
+if (!builder.Configuration.GetValue<bool>("DISABLE_MAIL_WORKER"))
+    builder.Services.AddHostedService<PendingMailWorker>();
 
 var app = builder.Build();
 app.UseExceptionHandler();
