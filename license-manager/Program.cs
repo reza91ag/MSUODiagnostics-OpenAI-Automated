@@ -128,32 +128,38 @@ app.MapPost("/api/register", async (RegistrationInput input, FirestoreDb db, Lic
     if (input.Edition != "DeveloperPreview") return Results.BadRequest(new { error = "Community Edition is coming soon." });
     const string edition = "DeveloperPreview";
     var doc = db.Collection(edition).Document(hash);
-    var license = signer.Issue(hash, email, edition);
-    var record = new Dictionary<string, object> {
-        ["email"] = email, ["emailHash"] = hash, ["edition"] = edition,
-        ["licenseKey"] = license, ["issuedAt"] = Timestamp.GetCurrentTimestamp(),
-        ["deliveryStatus"] = "pending", ["deliveryAttempts"] = 0, ["schemaVersion"] = 2,
-        ["usageCount"] = 0L, ["eulaAccepted"] = true, ["eulaVersion"] = EulaAgreement.Version,
-        ["eulaSha256"] = eula.Sha256, ["eulaAcceptedUtc"] = FieldValue.ServerTimestamp
-    };
-    try { await doc.CreateAsync(record, ct); }
-    catch (Grpc.Core.RpcException ex) when (ex.StatusCode == Grpc.Core.StatusCode.AlreadyExists) {
-        // Existing keys are preserved. Legacy registrations may explicitly accept the EULA
-        // and receive their original key with the newly accepted agreement.
-        await db.RunTransactionAsync(async tx => {
-            var existing = await tx.GetSnapshotAsync(doc, ct);
-            if (!existing.Exists || eula.WasAccepted(existing)) return false;
-            tx.Update(doc, new Dictionary<string, object> {
-                ["eulaAccepted"] = true, ["eulaVersion"] = EulaAgreement.Version,
-                ["eulaSha256"] = eula.Sha256, ["eulaAcceptedUtc"] = FieldValue.ServerTimestamp,
-                ["deliveryStatus"] = "pending", ["deliveryAttempts"] = 0
+    await db.RunTransactionAsync(async tx => {
+        var existing = await tx.GetSnapshotAsync(doc, ct);
+        if (!existing.Exists) {
+            var license = signer.Issue(hash, email, edition);
+            tx.Create(doc, new Dictionary<string, object> {
+                ["email"] = email, ["emailHash"] = hash, ["edition"] = edition,
+                ["licenseKey"] = license, ["issuedAt"] = Timestamp.GetCurrentTimestamp(),
+                ["deliveryStatus"] = "pending", ["deliveryAttempts"] = 0, ["schemaVersion"] = 2,
+                ["usageCount"] = 0L, ["eulaAccepted"] = true, ["eulaVersion"] = EulaAgreement.Version,
+                ["eulaSha256"] = eula.Sha256, ["eulaAcceptedUtc"] = FieldValue.ServerTimestamp
             });
-            return true;
-        }, cancellationToken: ct);
-        return Results.Accepted(value: new { message = "If eligible, a license will be emailed to that address." });
-    }
-    // The background worker sends the license. No browser ever receives the key.
-    return Results.Accepted(value: new { message = "If eligible, a license will be emailed to that address." });
+        } else {
+            // Recover the existing key by requeueing its original record.
+            // Never replace the key, original issuance date, or usage statistics.
+            var updates = new Dictionary<string, object>();
+            var pending = existing.TryGetValue<string>("deliveryStatus", out var status) && status == "pending";
+            if (!pending) {
+                updates["deliveryStatus"] = "pending";
+                updates["deliveryAttempts"] = 0;
+            }
+            if (!eula.WasAccepted(existing)) {
+                updates["eulaAccepted"] = true;
+                updates["eulaVersion"] = EulaAgreement.Version;
+                updates["eulaSha256"] = eula.Sha256;
+                updates["eulaAcceptedUtc"] = FieldValue.ServerTimestamp;
+            }
+            if (updates.Count > 0) tx.Update(doc, updates);
+        }
+        return true;
+    }, cancellationToken: ct);
+    // The mail worker reads the stored credential and delivers it only to the registered address.
+    return Results.Accepted(value: new { message = "Your license request has been received. Check your email shortly." });
 }).RequireRateLimiting("register");
 
 app.Run();
