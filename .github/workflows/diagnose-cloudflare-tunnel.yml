@@ -1,0 +1,39 @@
+name: Read-only Cloudflare Tunnel diagnostic
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/diagnose-cloudflare-tunnel.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: self-hosted
+    timeout-minutes: 3
+    steps:
+      - name: Inspect tunnel and local origins
+        shell: powershell
+        run: |
+          Write-Host "UTC: $([DateTime]::UtcNow.ToString('o'))"
+          $services = @(Get-Service -ErrorAction SilentlyContinue | Where-Object { $_.Name -match 'cloudflared' -or $_.DisplayName -match 'cloudflare' })
+          if ($services.Count -eq 0) { Write-Host 'No Cloudflare service found' }
+          $services | Select-Object Name,Status,StartType | Format-Table -AutoSize
+          $processes = @(Get-Process cloudflared -ErrorAction SilentlyContinue)
+          if ($processes.Count -eq 0) { Write-Host 'No cloudflared process running' }
+          $processes | Select-Object Id,ProcessName,StartTime | Format-Table -AutoSize
+          foreach ($p in $processes) {
+            Get-NetTCPConnection -OwningProcess $p.Id -ErrorAction SilentlyContinue | Group-Object State | Select-Object Name,Count | Format-Table -AutoSize
+          }
+          try {
+            $r = Invoke-WebRequest 'http://127.0.0.1:5107/health' -UseBasicParsing -TimeoutSec 5
+            Write-Host "Local license health: $($r.StatusCode)"
+          } catch { Write-Host "Local license health failed: $($_.Exception.Message)" }
+          foreach ($url in @('https://msuo-runtime.io','https://diagnostics.msuo-runtime.io','https://license.msuo-runtime.io/health')) {
+            try {
+              $r = Invoke-WebRequest $url -UseBasicParsing -TimeoutSec 8
+              Write-Host "$url HTTP $($r.StatusCode)"
+            } catch {
+              if ($_.Exception.Response) { Write-Host "$url HTTP $([int]$_.Exception.Response.StatusCode)" }
+              else { Write-Host "$url failed: $($_.Exception.Message)" }
+            }
+          }
