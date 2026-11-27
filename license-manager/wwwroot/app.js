@@ -1,3 +1,10 @@
+function renderAgreement(text){
+ const target=document.getElementById('eula-text');target.replaceChildren();
+ const lines=text.replace(/\r\n/g,'\n').split('\n');let paragraph=[];
+ function add(tag,content,cls){const node=document.createElement(tag);node.textContent=content;if(cls)node.className=cls;target.append(node);}
+ function flush(){if(paragraph.length){add('p',paragraph.join(' '),/^\([a-z]\)/.test(paragraph[0])?'clause':'');paragraph=[];}}
+ lines.forEach((raw,i)=>{const line=raw.trim();if(i===0){add('h3',line,'doc-title');return;}if(i<4){add('p',line,'doc-meta');return;}if(!line){flush();return;}if(/^\d+(?:\.\d+)?\.?\s+[A-Z]/.test(line)){flush();add('h3',line);return;}if(line==='END OF AGREEMENT'){flush();add('p',line,'end');return;}if(/^\([a-z]\)/.test(line))flush();paragraph.push(line);});flush();
+}
 const form=document.getElementById('form'),msg=document.getElementById('message'),button=document.getElementById('register'),accepted=document.getElementById('eula-accepted');
 let eula=null,submitting=false;
 function refresh(){button.disabled=submitting||!eula||!accepted.checked;}
@@ -8,7 +15,7 @@ async function loadEula(){
   if(!response.ok)throw Error('EULA unavailable');
   const data=await response.json();
   if(!data.text||!data.version||!data.sha256)throw Error('Incomplete EULA');
-  eula=data;document.getElementById('eula-text').textContent=data.text;
+  eula=data;renderAgreement(data.text);
   document.getElementById('eula-version').textContent='Version '+data.version;
   accepted.disabled=false;accepted.checked=false;refresh();
  }catch{msg.textContent='The license agreement could not be loaded. Reload this page to try again.';}

@@ -1,0 +1,321 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Count 6 /Kids [5 0 R 7 0 R 9 0 R 11 0 R 13 0 R 15 0 R] >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 6 0 R >>
+endobj
+6 0 obj
+<< /Length 4825 >>
+stream
+0.33 0.39 0.62 rg 52 790 491 3 re f
+BT /F2 10 Tf 0.15 0.23 0.38 rg 52 804 Td (MSUO | SKY DIGITAL DREAMS) Tj ET
+BT /F2 15 Tf 0.15 0.23 0.38 rg 52 752 Td (MSUO\231 PROPRIETARY SOFTWARE LICENSE AGREEMENT) Tj ET
+BT /F1 11 Tf 0.18 0.22 0.29 rg 52 728 Td (Meta-Schema Universal Orchestration \(MSUO\)) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 710 Td (License version 1.0 \227 27 November 2026) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 696 Td (Copyright \251 2026 Sky Digital Dreams. All rights reserved.) Tj ET
+BT /F2 11 Tf 0.15 0.23 0.38 rg 52 669 Td (1. SCOPE AND ACCEPTANCE) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 643 Td (This Agreement governs the proprietary MSUO software supplied by Sky) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 629 Td (Digital Dreams, Vienna, Austria \(the \223Licensor\224\), to the individual) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 615 Td (or legal entity accepting this Agreement \(the \223Licensee\224\).) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 594 Td (\223Software\224 means the proprietary MSUO kernel, runtime, SDK, binaries,) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 580 Td (APIs, project templates, documentation and associated materials supplied) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 566 Td (under this Agreement, including updates supplied under the same terms.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 552 Td (Materials expressly licensed under separate terms are governed by those) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 538 Td (terms instead.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 517 Td (\223Application\224 means software independently developed by the Licensee) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 503 Td (using MSUO, including application logic, mountable DLLs, schemas,) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 489 Td (configuration, user interfaces and integrations, excluding the Software) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 475 Td (itself and copies or adaptations of its proprietary implementation.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 454 Td (By affirmatively accepting this Agreement and installing or using the) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 440 Td (Software, the Licensee agrees to these terms. A person accepting on) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 426 Td (behalf of an organization must have authority to bind that organization.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 412 Td (If the Licensee does not agree, the Licensee must not install or use the) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 398 Td (Software, except to the extent otherwise permitted by applicable law.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 377 Td (The Software is proprietary and licensed, not sold. Public availability) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 363 Td (through NuGet or any other distribution channel does not make it open) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 349 Td (source or grant unrestricted usage rights.) Tj ET
+BT /F2 11 Tf 0.15 0.23 0.38 rg 52 322 Td (2. DEVELOPER PREVIEW AND COMMUNITY LICENSE) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 296 Td (Subject to this Agreement and any applicable edition-specific license) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 282 Td (conditions expressly agreed with the Licensor, the Licensor grants the) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 268 Td (Licensee a limited, non-exclusive, non-transferable, non-sublicensable,) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 254 Td (royalty-free license to:) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 233 Td (\(a\) download, install and execute the Software for development,) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 219 Td (    evaluation, education, research, prototyping and testing;) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 205 Td (\(b\) develop and debug Applications, including Applications intended) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 191 Td (    for future commercial use;) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 177 Td (\(c\) use the Software in controlled non-production environments,) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 163 Td (    including development machines, CI systems, test servers and) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 149 Td (    staging environments;) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 135 Td (\(d\) compile and publish Applications into standalone deployment) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 121 Td (    artifacts for non-production testing and evaluation;) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 107 Td (\(e\) create demonstrations and controlled proofs of concept that do not) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 93 Td (    provide an operational production service; and) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 79 Td (\(f\) make copies reasonably necessary for these authorized activities.) Tj ET
+0.82 0.85 0.90 RG 52 54 m 543 54 l S
+BT /F1 9 Tf 0.34 0.39 0.47 rg 52 38 Td (MSUO EULA v1.0 - Page 1 of 6) Tj ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 8 0 R >>
+endobj
+8 0 obj
+<< /Length 5110 >>
+stream
+0.33 0.39 0.62 rg 52 790 491 3 re f
+BT /F2 10 Tf 0.15 0.23 0.38 rg 52 804 Td (MSUO | SKY DIGITAL DREAMS) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 752 Td (These permissions apply to Developer Preview and Community releases.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 738 Td (They do not authorize production use, commercial operation of the) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 724 Td (Software or redistribution of the proprietary kernel to third parties.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 710 Td (Authorized personnel of an organizational Licensee may use the Software) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 696 Td (on its behalf within the same license scope.) Tj ET
+BT /F2 11 Tf 0.15 0.23 0.38 rg 52 669 Td (3. PRODUCTION USE AND COMMERCIAL LICENSE) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 643 Td (\223Production Use\224 means operating the Software to deliver actual business,) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 629 Td (organizational or end-user functionality, rather than solely for) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 615 Td (controlled development, demonstration or evaluation. It includes internal) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 601 Td (business operations, live customer services, operational IoT systems,) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 587 Td (commercial SaaS and applications serving real operational workloads,) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 573 Td (whether paid or unpaid and whether hosted locally or remotely.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 552 Td (Production Use requires a separate valid commercial license granted by) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 538 Td (the Licensor, unless expressly authorized in writing by the Licensor.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 517 Td (Developing an Application for a commercial purpose does not by itself) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 503 Td (require a commercial license. The Licensee may charge for development) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 489 Td (services and sell or license its independently developed Application) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 475 Td (code. Such transactions do not convey rights to the MSUO Software.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 461 Td (Commercial distribution or operation of an MSUO-powered Application) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 447 Td (that includes or requires the Software for Production Use requires) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 433 Td (appropriate commercial authorization for the relevant deployment and) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 419 Td (any distribution of the Software.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 398 Td (Commercial licenses may specify authorized users, applications,) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 384 Td (instances, deployment environments, duration and other usage limits.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 370 Td (Enterprise licensing does not automatically grant unrestricted) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 356 Td (redistribution, sublicensing or managed hosting rights. Those rights) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 342 Td (must be expressly granted in the applicable commercial agreement.) Tj ET
+BT /F2 11 Tf 0.15 0.23 0.38 rg 52 315 Td (4. RESTRICTIONS) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 289 Td (Except as expressly authorized by this Agreement, a separate written) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 275 Td (agreement or mandatory applicable law, the Licensee must not:) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 254 Td (\(a\) use the Software for Production Use under a Developer Preview or) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 240 Td (    Community license;) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 226 Td (\(b\) sell, rent, sublicense, redistribute, repackage or independently) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 212 Td (    distribute the proprietary Software or make it available as a) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 198 Td (    substitute SDK, runtime or kernel;) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 184 Td (\(c\) modify, patch, translate or create derivative works of the) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 170 Td (    proprietary Software, except for customization of Applications,) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 156 Td (    configuration and designated editable template materials as allowed) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 142 Td (    by Section 5;) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 128 Td (\(d\) reverse engineer, decompile or disassemble the proprietary Software) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 114 Td (    for purposes not permitted by mandatory applicable law;) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 100 Td (\(e\) circumvent or disable license verification, edition restrictions,) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 86 Td (    usage limits or other protection mechanisms, except where expressly) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 72 Td (    permitted by mandatory applicable law;) Tj ET
+0.82 0.85 0.90 RG 52 54 m 543 54 l S
+BT /F1 9 Tf 0.34 0.39 0.47 rg 52 38 Td (MSUO EULA v1.0 - Page 2 of 6) Tj ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 10 0 R >>
+endobj
+10 0 obj
+<< /Length 4910 >>
+stream
+0.33 0.39 0.62 rg 52 790 491 3 re f
+BT /F2 10 Tf 0.15 0.23 0.38 rg 52 804 Td (MSUO | SKY DIGITAL DREAMS) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 752 Td (\(f\) forge, share without authorization or misuse license credentials;) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 738 Td (\(g\) remove or falsify copyright, trademark or proprietary notices;) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 724 Td (\(h\) offer the Software itself as a hosted runtime, orchestration service,) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 710 Td (    platform-as-a-service, managed kernel or competing MSUO-based SDK) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 696 Td (    without a separate written hosting or redistribution agreement; or) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 682 Td (\(i\) disclose or distribute proprietary implementation material obtained) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 668 Td (    in breach of this Agreement.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 647 Td (These restrictions do not prohibit lawful independent development of) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 633 Td (competing software or the use of publicly disclosed architectural ideas,) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 619 Td (principles or methodologies, provided no protected MSUO implementation) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 605 Td (or other legally protected material is unlawfully used.) Tj ET
+BT /F2 11 Tf 0.15 0.23 0.38 rg 52 578 Td (5. APPLICATION OWNERSHIP AND TEMPLATES) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 552 Td (As between the parties, the Licensee retains ownership of its independently) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 538 Td (created Application code, business logic, schemas, data, configurations,) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 524 Td (user interfaces and other original materials. The Licensor acquires no) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 510 Td (ownership interest in those materials merely because they use MSUO.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 489 Td (The Licensee may modify and distribute the editable source scaffolding) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 475 Td (expressly supplied for incorporation into Applications, as part of those) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 461 Td (Applications, subject to preservation of applicable notices. This does) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 447 Td (not authorize independent redistribution of the MSUO template package,) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 433 Td (proprietary kernel, runtime binaries or SDK tooling.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 412 Td (The Licensor retains all rights in its proprietary Software, including) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 398 Td (its implementation, binaries, proprietary tooling and documentation.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 384 Td (No patent, trademark or other intellectual property license is granted) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 370 Td (except as expressly stated or necessarily implied by the authorized use) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 356 Td (of the Software. The Licensee may truthfully identify MSUO compatibility) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 342 Td (without implying endorsement or affiliation.) Tj ET
+BT /F2 11 Tf 0.15 0.23 0.38 rg 52 315 Td (6. THIRD-PARTY COMPONENTS) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 289 Td (Third-party components distributed with or referenced by MSUO remain) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 275 Td (subject to their respective licenses. This Agreement does not restrict) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 261 Td (rights granted by those licenses or claim ownership of third-party code.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 247 Td (Where a third-party license requires notices, source availability or) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 233 Td (other conditions, those requirements remain applicable to that component.) Tj ET
+BT /F2 11 Tf 0.15 0.23 0.38 rg 52 206 Td (7. LICENSE VERIFICATION AND CREDENTIALS) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 180 Td (The Software may require a valid license credential and may enforce) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 166 Td (edition-specific restrictions. Possession of a working credential or) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 152 Td (successful execution of the Software does not expand the rights granted) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 138 Td (by this Agreement. Conversely, technical capability to perform an) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 124 Td (operation does not constitute legal permission to perform it.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 103 Td (The Licensee is responsible for protecting its license credentials and) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 89 Td (using them only within their authorized scope.) Tj ET
+0.82 0.85 0.90 RG 52 54 m 543 54 l S
+BT /F1 9 Tf 0.34 0.39 0.47 rg 52 38 Td (MSUO EULA v1.0 - Page 3 of 6) Tj ET
+endstream
+endobj
+11 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 12 0 R >>
+endobj
+12 0 obj
+<< /Length 4949 >>
+stream
+0.33 0.39 0.62 rg 52 790 491 3 re f
+BT /F2 10 Tf 0.15 0.23 0.38 rg 52 804 Td (MSUO | SKY DIGITAL DREAMS) Tj ET
+BT /F2 11 Tf 0.15 0.23 0.38 rg 52 746 Td (7.1 LICENSE USAGE TELEMETRY) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 720 Td (The MSUO kernel uses an asynchronous, best-effort \("fire-and-forget"\)) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 706 Td (notification mechanism to inform the Licensor's analytics backend of) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 692 Td (license usage. Its purpose is to record the most recent known usage of) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 678 Td (a license and support aggregate license-usage analytics.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 657 Td (The notification is designed to operate independently of the primary) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 643 Td (application execution lifecycle. Failure to deliver an analytics) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 629 Td (notification does not, by itself, prevent or interrupt application) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 615 Td (execution or replace the kernel's license verification requirements.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 594 Td (Telemetry is intended to be limited to a pseudonymous license identifier) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 580 Td (and a last-usage timestamp. The telemetry mechanism must not transmit) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 566 Td (application payloads, business data, application source code, end-user) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 552 Td (content, passwords or private signing keys. Analytics results may be) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 538 Td (aggregated and anonymized. Where a license identifier or network metadata) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 524 Td (can be linked to an identifiable person, such information is treated as) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 510 Td (personal data rather than anonymous data.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 489 Td (Any processing of personal data is subject to applicable data protection) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 475 Td (law and the Licensor's applicable privacy notice, including information) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 461 Td (on purposes, legal basis, retention and data subject rights. Acceptance) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 447 Td (of this Agreement does not constitute consent to processing where) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 433 Td (separate consent is legally required.) Tj ET
+BT /F2 11 Tf 0.15 0.23 0.38 rg 52 406 Td (8. PREVIEW STATUS, SUPPORT AND UPDATES) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 380 Td (Developer Preview releases are pre-release software and may contain) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 366 Td (errors, incomplete features, breaking changes or compatibility issues.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 352 Td (No commitment to maintenance, support, service availability, backward) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 338 Td (compatibility or future release dates is made unless separately agreed.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 317 Td (The Licensee should maintain appropriate backups and test Applications) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 303 Td (in controlled environments. A new release may be offered under different) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 289 Td (terms, subject to the Licensee's acceptance; this does not retroactively) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 275 Td (alter the terms governing an already licensed release.) Tj ET
+BT /F2 11 Tf 0.15 0.23 0.38 rg 52 248 Td (9. WARRANTIES AND LIABILITY) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 222 Td (To the extent permitted by applicable law, the Software is supplied) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 208 Td (\223AS IS\224 and \223AS AVAILABLE\224, without voluntary warranties or guarantees) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 194 Td (of uninterrupted operation, fitness for a particular purpose, accuracy,) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 180 Td (security or compatibility.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 159 Td (To the extent permitted by applicable law, the Licensor is not liable) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 145 Td (for loss of profits, loss of business, loss of data or indirect or) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 131 Td (consequential damages arising from use of the Software. For business) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 117 Td (Licensees, liability for ordinary negligence is excluded to the extent) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 103 Td (legally permissible, except where exclusion would defeat essential) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 89 Td (contractual obligations.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 68 Td (Nothing in this Agreement excludes or limits liability for intentional) Tj ET
+0.82 0.85 0.90 RG 52 54 m 543 54 l S
+BT /F1 9 Tf 0.34 0.39 0.47 rg 52 38 Td (MSUO EULA v1.0 - Page 4 of 6) Tj ET
+endstream
+endobj
+13 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 14 0 R >>
+endobj
+14 0 obj
+<< /Length 4587 >>
+stream
+0.33 0.39 0.62 rg 52 790 491 3 re f
+BT /F2 10 Tf 0.15 0.23 0.38 rg 52 804 Td (MSUO | SKY DIGITAL DREAMS) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 752 Td (misconduct, gross negligence, death or personal injury, mandatory) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 738 Td (product liability, or any other liability or statutory warranty that) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 724 Td (cannot lawfully be excluded or limited. Mandatory consumer rights remain) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 710 Td (unaffected.) Tj ET
+BT /F2 11 Tf 0.15 0.23 0.38 rg 52 683 Td (10. TERM AND TERMINATION) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 657 Td (The Developer Preview and Community license continues while the Licensee) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 643 Td (complies with this Agreement and any expressly agreed duration limits.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 629 Td (The Licensor may terminate the license for a material breach that is not) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 615 Td (remedied within a reasonable period after notice, or immediately where) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 601 Td (legally permissible for a serious breach that cannot reasonably be cured.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 587 Td (The Licensee may terminate by ceasing use of the Software.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 566 Td (Upon termination, the Licensee must cease unauthorized use and remove) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 552 Td (copies of the proprietary Software under its control, except copies) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 538 Td (required by law. Termination does not transfer ownership of or require) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 524 Td (deletion of the Licensee's independently developed Application code or) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 510 Td (data. Continued use of the Software requires an applicable valid license.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 496 Td (Provisions concerning ownership, restrictions on unauthorized use,) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 482 Td (liability and governing law survive termination as applicable.) Tj ET
+BT /F2 11 Tf 0.15 0.23 0.38 rg 52 455 Td (11. MANDATORY STATUTORY RIGHTS) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 429 Td (Nothing in this Agreement restricts rights that cannot be waived under) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 415 Td (applicable law, including applicable rights to make necessary backup) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 401 Td (copies, observe, study or test the functioning of a computer program,) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 387 Td (or decompile it under the statutory conditions for interoperability.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 373 Td (This includes rights under applicable Austrian copyright law and EU) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 359 Td (Directive 2009/24/EC, as implemented in national law.) Tj ET
+BT /F2 11 Tf 0.15 0.23 0.38 rg 52 332 Td (12. GOVERNING LAW AND GENERAL PROVISIONS) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 306 Td (This Agreement is governed by Austrian law, without depriving consumers) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 292 Td (of mandatory protections applicable in their country of habitual) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 278 Td (residence. For business Licensees, the competent courts in Vienna,) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 264 Td (Austria shall have jurisdiction to the extent legally permissible.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 250 Td (Mandatory jurisdiction rules remain unaffected.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 229 Td (If any provision is unenforceable, the remaining provisions continue) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 215 Td (in effect to the extent permitted by law. A separate written commercial) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 201 Td (agreement between the parties prevails over this Agreement in the event) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 187 Td (of conflict concerning its expressly authorized commercial rights.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 166 Td (All rights not expressly granted are reserved, subject to applicable law.) Tj ET
+BT /F2 11 Tf 0.15 0.23 0.38 rg 52 139 Td (13. LICENSING AND CONTACT) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 113 Td (Sky Digital Dreams) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 99 Td (Vienna, Austria) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 85 Td (Official MSUO website: https://msuo-runtime.io/) Tj ET
+0.82 0.85 0.90 RG 52 54 m 543 54 l S
+BT /F1 9 Tf 0.34 0.39 0.47 rg 52 38 Td (MSUO EULA v1.0 - Page 5 of 6) Tj ET
+endstream
+endobj
+15 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 16 0 R >>
+endobj
+16 0 obj
+<< /Length 520 >>
+stream
+0.33 0.39 0.62 rg 52 790 491 3 re f
+BT /F2 10 Tf 0.15 0.23 0.38 rg 52 804 Td (MSUO | SKY DIGITAL DREAMS) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 752 Td (For production, enterprise, redistribution or managed hosting rights,) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 738 Td (obtain a separate commercial authorization from the Licensor.) Tj ET
+BT /F1 10 Tf 0.18 0.22 0.29 rg 52 717 Td (END OF AGREEMENT) Tj ET
+0.82 0.85 0.90 RG 52 54 m 543 54 l S
+BT /F1 9 Tf 0.34 0.39 0.47 rg 52 38 Td (MSUO EULA v1.0 - Page 6 of 6) Tj ET
+endstream
+endobj
+xref
+0 17
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000148 00000 n 
+0000000245 00000 n 
+0000000347 00000 n 
+0000000483 00000 n 
+0000005359 00000 n 
+0000005495 00000 n 
+0000010656 00000 n 
+0000010793 00000 n 
+0000015755 00000 n 
+0000015893 00000 n 
+0000020894 00000 n 
+0000021032 00000 n 
+0000025671 00000 n 
+0000025809 00000 n 
+trailer
+<< /Size 17 /Root 1 0 R >>
+startxref
+26380
+%%EOF

@@ -150,7 +150,7 @@ public sealed record HeartbeatInput(string? License = null, string? LicenseId = 
     string? LicenseFingerprint = null, string? Edition = null);
 
 public sealed class EulaAgreement {
-    public const string Version = "1.2";
+    public const string Version = "1.0";
     public string DocumentVersion { get; }
     private readonly EulaAgreement? previous;
     public string Text { get; }
@@ -159,6 +159,8 @@ public sealed class EulaAgreement {
     public EulaAgreement(string folder, string version = Version) {
         DocumentVersion = version;
         if (version == Version)
+            previous = new EulaAgreement(Path.Combine(Path.GetDirectoryName(folder)!, "1.2"), "1.2");
+        else if (version == "1.2")
             previous = new EulaAgreement(Path.Combine(Path.GetDirectoryName(folder)!, "1.1"), "1.1");
         var bytes = File.ReadAllBytes(Path.Combine(folder, "LICENSE.txt"));
         Text = Encoding.UTF8.GetString(bytes);
