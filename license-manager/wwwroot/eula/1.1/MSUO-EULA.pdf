@@ -1,0 +1,364 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Count 6 /Kids [4 0 R 6 0 R 8 0 R 10 0 R 12 0 R 14 0 R] >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>
+endobj
+5 0 obj
+<< /Length 2838 >>
+stream
+BT /F1 10 Tf 14 TL 65 782 Td
+(MSUO\231 PROPRIETARY SOFTWARE LICENSE AGREEMENT) Tj
+T* (Meta-Schema Universal Orchestration \(MSUO\)) Tj
+T* (License version 1.1 \227 27 November 2026) Tj
+T* (Copyright \251 2026 Sky Digital Dreams e.U. All rights reserved.) Tj
+T* () Tj
+T* (1. SCOPE AND ACCEPTANCE) Tj
+T* () Tj
+T* (This Agreement governs the proprietary MSUO software supplied by Sky) Tj
+T* (Digital Dreams e.U., Vienna, Austria \(the \223Licensor\224\), to the individual) Tj
+T* (or legal entity accepting this Agreement \(the \223Licensee\224\).) Tj
+T* () Tj
+T* (\223Software\224 means the proprietary MSUO kernel, runtime, SDK, binaries,) Tj
+T* (APIs, project templates, documentation and associated materials supplied) Tj
+T* (under this Agreement, including updates supplied under the same terms.) Tj
+T* (Materials expressly licensed under separate terms are governed by those) Tj
+T* (terms instead.) Tj
+T* () Tj
+T* (\223Application\224 means software independently developed by the Licensee) Tj
+T* (using MSUO, including application logic, mountable DLLs, schemas,) Tj
+T* (configuration, user interfaces and integrations, excluding the Software) Tj
+T* (itself and copies or adaptations of its proprietary implementation.) Tj
+T* () Tj
+T* (By affirmatively accepting this Agreement and installing or using the) Tj
+T* (Software, the Licensee agrees to these terms. A person accepting on) Tj
+T* (behalf of an organization must have authority to bind that organization.) Tj
+T* (If the Licensee does not agree, the Licensee must not install or use the) Tj
+T* (Software, except to the extent otherwise permitted by applicable law.) Tj
+T* () Tj
+T* (The Software is proprietary and licensed, not sold. Public availability) Tj
+T* (through NuGet or any other distribution channel does not make it open) Tj
+T* (source or grant unrestricted usage rights.) Tj
+T* () Tj
+T* (2. DEVELOPER PREVIEW AND COMMUNITY LICENSE) Tj
+T* () Tj
+T* (Subject to this Agreement and any applicable edition-specific license) Tj
+T* (conditions expressly agreed with the Licensor, the Licensor grants the) Tj
+T* (Licensee a limited, non-exclusive, non-transferable, non-sublicensable,) Tj
+T* (royalty-free license to:) Tj
+T* () Tj
+T* (\(a\) download, install and execute the Software for development,) Tj
+T* (    evaluation, education, research, prototyping and testing;) Tj
+T* (\(b\) develop and debug Applications, including Applications intended) Tj
+T* (    for future commercial use;) Tj
+T* (\(c\) use the Software in controlled non-production environments,) Tj
+T* (    including development machines, CI systems, test servers and) Tj
+T* (    staging environments;) Tj
+T* (\(d\) compile and publish Applications into standalone deployment) Tj
+T* (    artifacts for non-production testing and evaluation;) Tj
+ET
+BT /F1 9 Tf 65 45 Td (MSUO EULA v1.1 - Page 1 of 6) Tj ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 7 0 R >>
+endobj
+7 0 obj
+<< /Length 2929 >>
+stream
+BT /F1 10 Tf 14 TL 65 782 Td
+(\(e\) create demonstrations and controlled proofs of concept that do not) Tj
+T* (    provide an operational production service; and) Tj
+T* (\(f\) make copies reasonably necessary for these authorized activities.) Tj
+T* () Tj
+T* (These permissions apply to Developer Preview and Community releases.) Tj
+T* (They do not authorize production use, commercial operation of the) Tj
+T* (Software or redistribution of the proprietary kernel to third parties.) Tj
+T* (Authorized personnel of an organizational Licensee may use the Software) Tj
+T* (on its behalf within the same license scope.) Tj
+T* () Tj
+T* (3. PRODUCTION USE AND COMMERCIAL LICENSE) Tj
+T* () Tj
+T* (\223Production Use\224 means operating the Software to deliver actual business,) Tj
+T* (organizational or end-user functionality, rather than solely for) Tj
+T* (controlled development, demonstration or evaluation. It includes internal) Tj
+T* (business operations, live customer services, operational IoT systems,) Tj
+T* (commercial SaaS and applications serving real operational workloads,) Tj
+T* (whether paid or unpaid and whether hosted locally or remotely.) Tj
+T* () Tj
+T* (Production Use requires a separate valid commercial license granted by) Tj
+T* (the Licensor, unless expressly authorized in writing by the Licensor.) Tj
+T* () Tj
+T* (Developing an Application for a commercial purpose does not by itself) Tj
+T* (require a commercial license. The Licensee may charge for development) Tj
+T* (services and sell or license its independently developed Application) Tj
+T* (code. Such transactions do not convey rights to the MSUO Software.) Tj
+T* (Commercial distribution or operation of an MSUO-powered Application) Tj
+T* (that includes or requires the Software for Production Use requires) Tj
+T* (appropriate commercial authorization for the relevant deployment and) Tj
+T* (any distribution of the Software.) Tj
+T* () Tj
+T* (Commercial licenses may specify authorized users, applications,) Tj
+T* (instances, deployment environments, duration and other usage limits.) Tj
+T* (Enterprise licensing does not automatically grant unrestricted) Tj
+T* (redistribution, sublicensing or managed hosting rights. Those rights) Tj
+T* (must be expressly granted in the applicable commercial agreement.) Tj
+T* () Tj
+T* (4. RESTRICTIONS) Tj
+T* () Tj
+T* (Except as expressly authorized by this Agreement, a separate written) Tj
+T* (agreement or mandatory applicable law, the Licensee must not:) Tj
+T* () Tj
+T* (\(a\) use the Software for Production Use under a Developer Preview or) Tj
+T* (    Community license;) Tj
+T* (\(b\) sell, rent, sublicense, redistribute, repackage or independently) Tj
+T* (    distribute the proprietary Software or make it available as a) Tj
+T* (    substitute SDK, runtime or kernel;) Tj
+T* (\(c\) modify, patch, translate or create derivative works of the) Tj
+ET
+BT /F1 9 Tf 65 45 Td (MSUO EULA v1.1 - Page 2 of 6) Tj ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 9 0 R >>
+endobj
+9 0 obj
+<< /Length 3140 >>
+stream
+BT /F1 10 Tf 14 TL 65 782 Td
+(    proprietary Software, except for customization of Applications,) Tj
+T* (    configuration and designated editable template materials as allowed) Tj
+T* (    by Section 5;) Tj
+T* (\(d\) reverse engineer, decompile or disassemble the proprietary Software) Tj
+T* (    for purposes not permitted by mandatory applicable law;) Tj
+T* (\(e\) circumvent or disable license verification, edition restrictions,) Tj
+T* (    usage limits or other protection mechanisms, except where expressly) Tj
+T* (    permitted by mandatory applicable law;) Tj
+T* (\(f\) forge, share without authorization or misuse license credentials;) Tj
+T* (\(g\) remove or falsify copyright, trademark or proprietary notices;) Tj
+T* (\(h\) offer the Software itself as a hosted runtime, orchestration service,) Tj
+T* (    platform-as-a-service, managed kernel or competing MSUO-based SDK) Tj
+T* (    without a separate written hosting or redistribution agreement; or) Tj
+T* (\(i\) disclose or distribute proprietary implementation material obtained) Tj
+T* (    in breach of this Agreement.) Tj
+T* () Tj
+T* (These restrictions do not prohibit lawful independent development of) Tj
+T* (competing software or the use of publicly disclosed architectural ideas,) Tj
+T* (principles or methodologies, provided no protected MSUO implementation) Tj
+T* (or other legally protected material is unlawfully used.) Tj
+T* () Tj
+T* (5. APPLICATION OWNERSHIP AND TEMPLATES) Tj
+T* () Tj
+T* (As between the parties, the Licensee retains ownership of its independently) Tj
+T* (created Application code, business logic, schemas, data, configurations,) Tj
+T* (user interfaces and other original materials. The Licensor acquires no) Tj
+T* (ownership interest in those materials merely because they use MSUO.) Tj
+T* () Tj
+T* (The Licensee may modify and distribute the editable source scaffolding) Tj
+T* (expressly supplied for incorporation into Applications, as part of those) Tj
+T* (Applications, subject to preservation of applicable notices. This does) Tj
+T* (not authorize independent redistribution of the MSUO template package,) Tj
+T* (proprietary kernel, runtime binaries or SDK tooling.) Tj
+T* () Tj
+T* (The Licensor retains all rights in its proprietary Software, including) Tj
+T* (its implementation, binaries, proprietary tooling and documentation.) Tj
+T* (No patent, trademark or other intellectual property license is granted) Tj
+T* (except as expressly stated or necessarily implied by the authorized use) Tj
+T* (of the Software. The Licensee may truthfully identify MSUO compatibility) Tj
+T* (without implying endorsement or affiliation.) Tj
+T* () Tj
+T* (6. THIRD-PARTY COMPONENTS) Tj
+T* () Tj
+T* (Third-party components distributed with or referenced by MSUO remain) Tj
+T* (subject to their respective licenses. This Agreement does not restrict) Tj
+T* (rights granted by those licenses or claim ownership of third-party code.) Tj
+T* (Where a third-party license requires notices, source availability or) Tj
+T* (other conditions, those requirements remain applicable to that component.) Tj
+ET
+BT /F1 9 Tf 65 45 Td (MSUO EULA v1.1 - Page 3 of 6) Tj ET
+endstream
+endobj
+10 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 11 0 R >>
+endobj
+11 0 obj
+<< /Length 2873 >>
+stream
+BT /F1 10 Tf 14 TL 65 782 Td
+() Tj
+T* (7. LICENSE VERIFICATION AND CREDENTIALS) Tj
+T* () Tj
+T* (The Software may require a valid license credential and may enforce) Tj
+T* (edition-specific restrictions. Possession of a working credential or) Tj
+T* (successful execution of the Software does not expand the rights granted) Tj
+T* (by this Agreement. Conversely, technical capability to perform an) Tj
+T* (operation does not constitute legal permission to perform it.) Tj
+T* () Tj
+T* (The Licensee is responsible for protecting its license credentials and) Tj
+T* (using them only within their authorized scope.) Tj
+T* () Tj
+T* (7.1 LICENSE USAGE TELEMETRY) Tj
+T* () Tj
+T* (The MSUO kernel uses an asynchronous, best-effort \("fire-and-forget"\)) Tj
+T* (notification mechanism to inform the Licensor's analytics backend of) Tj
+T* (license usage. Its purpose is to record the most recent known usage of) Tj
+T* (a license and support aggregate license-usage analytics.) Tj
+T* () Tj
+T* (The notification is designed to operate independently of the primary) Tj
+T* (application execution lifecycle. Failure to deliver an analytics) Tj
+T* (notification does not, by itself, prevent or interrupt application) Tj
+T* (execution or replace the kernel's license verification requirements.) Tj
+T* () Tj
+T* (Telemetry is intended to be limited to a pseudonymous license identifier) Tj
+T* (and a last-usage timestamp. The telemetry mechanism must not transmit) Tj
+T* (application payloads, business data, application source code, end-user) Tj
+T* (content, passwords or private signing keys. Analytics results may be) Tj
+T* (aggregated and anonymized. Where a license identifier or network metadata) Tj
+T* (can be linked to an identifiable person, such information is treated as) Tj
+T* (personal data rather than anonymous data.) Tj
+T* () Tj
+T* (Any processing of personal data is subject to applicable data protection) Tj
+T* (law and the Licensor's applicable privacy notice, including information) Tj
+T* (on purposes, legal basis, retention and data subject rights. Acceptance) Tj
+T* (of this Agreement does not constitute consent to processing where) Tj
+T* (separate consent is legally required.) Tj
+T* () Tj
+T* (8. PREVIEW STATUS, SUPPORT AND UPDATES) Tj
+T* () Tj
+T* (Developer Preview releases are pre-release software and may contain) Tj
+T* (errors, incomplete features, breaking changes or compatibility issues.) Tj
+T* (No commitment to maintenance, support, service availability, backward) Tj
+T* (compatibility or future release dates is made unless separately agreed.) Tj
+T* () Tj
+T* (The Licensee should maintain appropriate backups and test Applications) Tj
+T* (in controlled environments. A new release may be offered under different) Tj
+T* (terms, subject to the Licensee's acceptance; this does not retroactively) Tj
+ET
+BT /F1 9 Tf 65 45 Td (MSUO EULA v1.1 - Page 4 of 6) Tj ET
+endstream
+endobj
+12 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 13 0 R >>
+endobj
+13 0 obj
+<< /Length 2836 >>
+stream
+BT /F1 10 Tf 14 TL 65 782 Td
+(alter the terms governing an already licensed release.) Tj
+T* () Tj
+T* (9. WARRANTIES AND LIABILITY) Tj
+T* () Tj
+T* (To the extent permitted by applicable law, the Software is supplied) Tj
+T* (\223AS IS\224 and \223AS AVAILABLE\224, without voluntary warranties or guarantees) Tj
+T* (of uninterrupted operation, fitness for a particular purpose, accuracy,) Tj
+T* (security or compatibility.) Tj
+T* () Tj
+T* (To the extent permitted by applicable law, the Licensor is not liable) Tj
+T* (for loss of profits, loss of business, loss of data or indirect or) Tj
+T* (consequential damages arising from use of the Software. For business) Tj
+T* (Licensees, liability for ordinary negligence is excluded to the extent) Tj
+T* (legally permissible, except where exclusion would defeat essential) Tj
+T* (contractual obligations.) Tj
+T* () Tj
+T* (Nothing in this Agreement excludes or limits liability for intentional) Tj
+T* (misconduct, gross negligence, death or personal injury, mandatory) Tj
+T* (product liability, or any other liability or statutory warranty that) Tj
+T* (cannot lawfully be excluded or limited. Mandatory consumer rights remain) Tj
+T* (unaffected.) Tj
+T* () Tj
+T* (10. TERM AND TERMINATION) Tj
+T* () Tj
+T* (The Developer Preview and Community license continues while the Licensee) Tj
+T* (complies with this Agreement and any expressly agreed duration limits.) Tj
+T* (The Licensor may terminate the license for a material breach that is not) Tj
+T* (remedied within a reasonable period after notice, or immediately where) Tj
+T* (legally permissible for a serious breach that cannot reasonably be cured.) Tj
+T* (The Licensee may terminate by ceasing use of the Software.) Tj
+T* () Tj
+T* (Upon termination, the Licensee must cease unauthorized use and remove) Tj
+T* (copies of the proprietary Software under its control, except copies) Tj
+T* (required by law. Termination does not transfer ownership of or require) Tj
+T* (deletion of the Licensee's independently developed Application code or) Tj
+T* (data. Continued use of the Software requires an applicable valid license.) Tj
+T* (Provisions concerning ownership, restrictions on unauthorized use,) Tj
+T* (liability and governing law survive termination as applicable.) Tj
+T* () Tj
+T* (11. MANDATORY STATUTORY RIGHTS) Tj
+T* () Tj
+T* (Nothing in this Agreement restricts rights that cannot be waived under) Tj
+T* (applicable law, including applicable rights to make necessary backup) Tj
+T* (copies, observe, study or test the functioning of a computer program,) Tj
+T* (or decompile it under the statutory conditions for interoperability.) Tj
+T* (This includes rights under applicable Austrian copyright law and EU) Tj
+T* (Directive 2009/24/EC, as implemented in national law.) Tj
+T* () Tj
+ET
+BT /F1 9 Tf 65 45 Td (MSUO EULA v1.1 - Page 5 of 6) Tj ET
+endstream
+endobj
+14 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 15 0 R >>
+endobj
+15 0 obj
+<< /Length 1271 >>
+stream
+BT /F1 10 Tf 14 TL 65 782 Td
+(12. GOVERNING LAW AND GENERAL PROVISIONS) Tj
+T* () Tj
+T* (This Agreement is governed by Austrian law, without depriving consumers) Tj
+T* (of mandatory protections applicable in their country of habitual) Tj
+T* (residence. For business Licensees, the competent courts in Vienna,) Tj
+T* (Austria shall have jurisdiction to the extent legally permissible.) Tj
+T* (Mandatory jurisdiction rules remain unaffected.) Tj
+T* () Tj
+T* (If any provision is unenforceable, the remaining provisions continue) Tj
+T* (in effect to the extent permitted by law. A separate written commercial) Tj
+T* (agreement between the parties prevails over this Agreement in the event) Tj
+T* (of conflict concerning its expressly authorized commercial rights.) Tj
+T* () Tj
+T* (All rights not expressly granted are reserved, subject to applicable law.) Tj
+T* () Tj
+T* (13. LICENSING AND CONTACT) Tj
+T* () Tj
+T* (Sky Digital Dreams e.U.) Tj
+T* (Vienna, Austria) Tj
+T* (Official MSUO website: https://msuo-runtime.io/) Tj
+T* () Tj
+T* (For production, enterprise, redistribution or managed hosting rights,) Tj
+T* (obtain a separate commercial authorization from the Licensor.) Tj
+T* () Tj
+T* (END OF AGREEMENT) Tj
+ET
+BT /F1 9 Tf 65 45 Td (MSUO EULA v1.1 - Page 6 of 6) Tj ET
+endstream
+endobj
+xref
+0 16
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000148 00000 n 
+0000000243 00000 n 
+0000000369 00000 n 
+0000003258 00000 n 
+0000003384 00000 n 
+0000006364 00000 n 
+0000006490 00000 n 
+0000009681 00000 n 
+0000009809 00000 n 
+0000012734 00000 n 
+0000012862 00000 n 
+0000015750 00000 n 
+0000015878 00000 n 
+trailer
+<< /Size 16 /Root 1 0 R >>
+startxref
+17201
+%%EOF

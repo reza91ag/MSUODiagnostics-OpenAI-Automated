@@ -4,6 +4,7 @@ using System.Net.Mail;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Text.Json;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,10 +15,15 @@ builder.Services.AddRateLimiter(options => {
     options.OnRejected = async (context, ct) => {
         context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
         context.HttpContext.Response.ContentType = "application/json";
-        context.HttpContext.Response.Headers.RetryAfter = "900";
+        context.HttpContext.Response.Headers.RetryAfter = context.HttpContext.Request.Path == "/heart-beat" ? "60" : "900";
         await context.HttpContext.Response.WriteAsJsonAsync(
-            new { error = "Too many registration attempts. Please try again in 15 minutes." }, cancellationToken: ct);
+            new { error = "Too many requests. Please try again later." }, cancellationToken: ct);
     };
+    options.AddPolicy("heartbeat", ctx => RateLimitPartition.GetFixedWindowLimiter(
+        ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions {
+            PermitLimit = 1200, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true
+        }));
     options.AddPolicy("register", ctx => {
         // Cloudflare Tunnel connects to Kestrel from loopback; the socket IP alone
         // would incorrectly count every visitor as one user.
@@ -43,6 +49,7 @@ if (string.IsNullOrWhiteSpace(keyPath) || !File.Exists(keyPath))
 builder.Services.AddSingleton(FirestoreDb.Create(projectId));
 builder.Services.AddSingleton(new LicenseSigner(File.ReadAllText(keyPath)));
 builder.Services.AddHttpClient();
+builder.Services.AddSingleton(new EulaAgreement(Path.Combine(AppContext.BaseDirectory, "wwwroot", "eula", EulaAgreement.Version)));
 builder.Services.AddSingleton<LicenseMailer>();
 builder.Services.AddHostedService<PendingMailWorker>();
 
@@ -60,7 +67,33 @@ app.MapGet("/msuo-email-logo.png", () => Results.File(
 app.MapGet("/CommunityEdition", () => Results.File(Path.Combine(app.Environment.WebRootPath, "community.html"), "text/html"));
 app.MapGet("/DeveloperPreview", () => Results.File(Path.Combine(app.Environment.WebRootPath, "preview.html"), "text/html"));
 app.MapGet("/preview", () => Results.Redirect("/DeveloperPreview"));
-app.MapPost("/api/register", async (RegistrationInput input, FirestoreDb db, LicenseSigner signer, LicenseMailer mailer, ILogger<Program> log, CancellationToken ct) => {
+app.MapGet("/api/eula", (EulaAgreement eula, HttpContext ctx) => {
+    ctx.Response.Headers.CacheControl = "no-store";
+    return Results.Ok(new { version = EulaAgreement.Version, sha256 = eula.Sha256, text = eula.Text, pdfUrl = "/eula/1.1/MSUO-EULA.pdf" });
+});
+app.MapPost("/heart-beat", async (HeartbeatInput input, FirestoreDb db, CancellationToken ct) => {
+    if (!HeartbeatCredential.TryResolve(input, out var edition, out var id, out var fingerprint))
+        return Results.Unauthorized();
+    var doc = db.Collection(edition).Document(id);
+    // Compare against the original issued credential before updating; unknown licenses never create records.
+    var accepted = await db.RunTransactionAsync(async tx => {
+        var record = await tx.GetSnapshotAsync(doc, ct);
+        if (!record.Exists || !record.TryGetValue<string>("licenseKey", out var issued) ||
+            string.IsNullOrEmpty(issued) ||
+            !CryptographicOperations.FixedTimeEquals(SHA256.HashData(Encoding.UTF8.GetBytes(issued)), fingerprint))
+            return false;
+        tx.Update(doc, new Dictionary<string, object> {
+            ["usageCount"] = FieldValue.Increment(1L),
+            ["lastUsedUtc"] = FieldValue.ServerTimestamp
+        });
+        return true;
+    }, cancellationToken: ct);
+    return accepted ? Results.NoContent() : Results.Unauthorized();
+}).RequireRateLimiting("heartbeat");
+
+app.MapPost("/api/register", async (RegistrationInput input, FirestoreDb db, LicenseSigner signer, EulaAgreement eula, CancellationToken ct) => {
+    if (input.EulaAccepted != true || input.EulaVersion != EulaAgreement.Version || input.EulaSha256 != eula.Sha256)
+        return Results.BadRequest(new { error = "Read and accept the current MSUO End-User License Agreement before requesting a license." });
     // No passwords, no Firebase Authentication and no browser Firebase API key.
     if (string.IsNullOrWhiteSpace(input.Email) || input.Email.Length > 254)
         return Results.BadRequest(new { error = "Enter a valid email address." });
@@ -79,11 +112,24 @@ app.MapPost("/api/register", async (RegistrationInput input, FirestoreDb db, Lic
     var record = new Dictionary<string, object> {
         ["email"] = email, ["emailHash"] = hash, ["edition"] = edition,
         ["licenseKey"] = license, ["issuedAt"] = Timestamp.GetCurrentTimestamp(),
-        ["deliveryStatus"] = "pending", ["deliveryAttempts"] = 0, ["schemaVersion"] = 1
+        ["deliveryStatus"] = "pending", ["deliveryAttempts"] = 0, ["schemaVersion"] = 2,
+        ["usageCount"] = 0L, ["eulaAccepted"] = true, ["eulaVersion"] = EulaAgreement.Version,
+        ["eulaSha256"] = eula.Sha256, ["eulaAcceptedUtc"] = FieldValue.ServerTimestamp
     };
     try { await doc.CreateAsync(record, ct); }
     catch (Grpc.Core.RpcException ex) when (ex.StatusCode == Grpc.Core.StatusCode.AlreadyExists) {
-        // Deliberately avoid exposing account existence to an unauthenticated caller.
+        // Existing keys are preserved. Legacy registrations may explicitly accept the EULA
+        // and receive their original key with the newly accepted agreement.
+        await db.RunTransactionAsync(async tx => {
+            var existing = await tx.GetSnapshotAsync(doc, ct);
+            if (!existing.Exists || eula.WasAccepted(existing)) return false;
+            tx.Update(doc, new Dictionary<string, object> {
+                ["eulaAccepted"] = true, ["eulaVersion"] = EulaAgreement.Version,
+                ["eulaSha256"] = eula.Sha256, ["eulaAcceptedUtc"] = FieldValue.ServerTimestamp,
+                ["deliveryStatus"] = "pending", ["deliveryAttempts"] = 0
+            });
+            return true;
+        }, cancellationToken: ct);
         return Results.Accepted(value: new { message = "If eligible, a license will be emailed to that address." });
     }
     // The background worker sends the license. No browser ever receives the key.
@@ -96,9 +142,59 @@ public static class EmailLogo {
     public const string PngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAKAAAACSBAMAAAAwU9y4AAAAMFBMVEVZYJ4AAABZaohZaolZaYhYaYlYZ4pZaohZaohYaohjY40AAP9ZcoyAgIBAgIBVVYDpPC9VAAAAEHRSTlMIAP62bcsULk+NBwEKAgQGQGcWZwAABN9JREFUeNrtWl1oW2UYfs53mhObbl0OKAXFLYahY960hoL1wlUYUpxKHCt2FIa7GTh/KHMlY1KxXrkbDbuSzosDu1IYHsEL2YJT/AGVwgG96DaIuVzB0TKnrj8xXiyJJ8n7fj8nx+lGzk3Ll6/P+zzv977P9yap5SLeR6AH2APsAd7tgFfz9Pq3zP68AtA5SK8nDtHrZwM5YOrRgH7h1VU6zlsKyRMVev2mJ43Tx+ElLzKCH6IJLo3JD2XgJMwEv6w45YNFen2JE9xIOCP5pychJ8II5hg6r0NBhI1DA74SRBTMAF73zARPefLWS+4wFLws7+V+rmKmPI04BOA0UzHOMr3+gSd3m7PnGILMSTkfye2r3uMqImwcodla7USaz+ee3GD3e4aCT8kd21mBHhE2Titg/5tMi3QQqT+nPfmdwlUMK/gT+SXFVsxpTzuO3R+qmMWbrS9mlupEfr8aXrb+bJyg37L9ntU2hlzFgLmuyBMU6lbF/opBHKFsVbaU6DjNK2DrTqZiUo8EJnGaDF+smN3P3BzQAEyeMxTMzQF1wMT9hgOJc1E+fbEVwwqWj3Nc67MDCSe4Dsi1PlBl1n+RD5ybwR03EufcN+IEfHClVJ4fjhHwOoCNyv85h5luAPtiIDU0/dl4qigBNKxKe2kO34/EncNxGeAWholbyB5RticleQ1AItMhfLN8AosjlQinXM1mszs6E5lqkdb2pnFVxrBGm7QVd2Gvcy+kwwxbAO2RoWN8D1tapxyWbP36Bebmzb3xviNuicyhAADfnOGHAIq3xRyqzWTk3ELn1o13szuf8qKYw7ZKCXOd7VI7BVwzK5sgfP5x+OHbIX2x+GF6cML9AchUumDYAvipfaH5+3AQg+RoBqvZy3HeeoOS/TltQHfo2MMzdYMt5B5/hyif2QN7Vr7WPRRRxhx2131qAbhE+dcZoKbLMPFfTV/aDNehbjuvm9bjng0jQMUIlzFhqJ3LYZNetuV7g0nXLQWagNXBCTd9vtFvufJL7xOXSqltNnnBckvPt30IYLkAxLaWtQd+BhJbAOzx+7ZSabqGkcqtn4CVDjk9k7sb3cyNIsqtHu6uosYllakAfyRD4AcAXGFO48sII/HAAoDDAT3spHUdO1Rvv92utxVCydB2C9nD9ZE46hXQ2inlEwgGsQYM7PtR/bfVXdP+3vMah1LdWw0u6LBZfg8LUoabtxZqi/+yY6ci5zBBe/xfkwaHpFPYa6Woktd1biEjhpOu+9WlGAFrJXT93NnfPArmZn+M2Z9XANrPpcn15D56/2hRAVhgCE7N0HEWFJKdWRkRIk5GDmiNQUaEjcMCHvKlRNg4HOC9xUiCWUBxhknEUVUc2m3sZ8eZROTpOClFYc96ZoJDCScBRwtQEWHjkN88MonCdl+dWApwKs8QYcab7Xk5IFcxrOBA7jbOFUPBKbl9cS3HC/blgLuZlrM+ZqbOQG6wo99wgmlztC7LHTv5DPSIsHFaAe2JGUbwE7pxhJZJY5evG0fomDQS39HrJ30pIFsxrODj8muUM2mKCBtHqFsOznGDOEJp0mwm6Djin2udMWm85pvEESqThjNvFEcoTBr2mFkcoTBpzPpGcRqAnEnDKRjFaQCyFdPHEHm6wI4wLgBnPeaBM0a83r8L9gDvTsC/Aa2eK9LUw4SxAAAAAElFTkSuQmCC";
 }
 
-public sealed record RegistrationInput(string Email, string? Edition = null);
+public sealed record RegistrationInput(string Email, string? Edition = null,
+    bool EulaAccepted = false, string? EulaVersion = null, string? EulaSha256 = null);
 
-public sealed class LicenseMailer(IConfiguration config, IHttpClientFactory factory) {
+public sealed record HeartbeatInput(string? License = null, string? LicenseId = null,
+    string? LicenseFingerprint = null, string? Edition = null);
+
+public sealed class EulaAgreement {
+    public const string Version = "1.1";
+    public string Text { get; }
+    public string Sha256 { get; }
+    public string PdfBase64 { get; }
+    public EulaAgreement(string folder) {
+        var bytes = File.ReadAllBytes(Path.Combine(folder, "LICENSE.txt"));
+        Text = Encoding.UTF8.GetString(bytes);
+        Sha256 = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+        PdfBase64 = Convert.ToBase64String(File.ReadAllBytes(Path.Combine(folder, "MSUO-EULA.pdf")));
+    }
+    public bool WasAccepted(DocumentSnapshot record) =>
+        record.TryGetValue<bool>("eulaAccepted", out var agreed) && agreed &&
+        record.TryGetValue<string>("eulaVersion", out var version) && version == Version &&
+        record.TryGetValue<string>("eulaSha256", out var hash) && hash == Sha256 &&
+        record.TryGetValue<Timestamp>("eulaAcceptedUtc", out _);
+}
+
+public static class HeartbeatCredential {
+    public static bool TryResolve(HeartbeatInput input, out string edition, out string id, out byte[] fingerprint) {
+        edition = ""; id = ""; fingerprint = Array.Empty<byte>();
+        try {
+            if (!string.IsNullOrEmpty(input.License)) {
+                if (input.License.Length > 8192) return false;
+                var parts = input.License.Split('.');
+                if (parts.Length != 3 || parts[0] != "MSUO1") return false;
+                var payload = parts[1].Replace('-', '+').Replace('_', '/');
+                using var json = JsonDocument.Parse(Convert.FromBase64String(payload + new string('=', (4 - payload.Length % 4) % 4)));
+                edition = json.RootElement.GetProperty("edition").GetString() ?? "";
+                id = json.RootElement.GetProperty("sub").GetString() ?? "";
+                fingerprint = SHA256.HashData(Encoding.UTF8.GetBytes(input.License));
+            } else {
+                edition = input.Edition ?? "";
+                id = input.LicenseId ?? "";
+                if (input.LicenseFingerprint is not { Length: 64 }) return false;
+                fingerprint = Convert.FromHexString(input.LicenseFingerprint);
+            }
+            return (edition == "DeveloperPreview" || edition == "CommunityEdition")
+                && id.Length == 64 && id.All(c => (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))
+                && fingerprint.Length == 32;
+        } catch (Exception ex) when (ex is FormatException or JsonException or InvalidOperationException or KeyNotFoundException or ArgumentException) {
+            return false;
+        }
+    }
+}
+
+public sealed class LicenseMailer(IConfiguration config, IHttpClientFactory factory, EulaAgreement eula) {
     public async Task SendAsync(string address, string license, string edition, CancellationToken ct) {
         var apiKey = config["RESEND_API_KEY"] ?? throw new InvalidOperationException("RESEND_API_KEY not configured.");
         var from = config["RESEND_FROM"] ?? throw new InvalidOperationException("RESEND_FROM not configured.");
@@ -126,6 +222,7 @@ public sealed class LicenseMailer(IConfiguration config, IHttpClientFactory fact
 <div style="font-size:16px;font-weight:700;color:#1b3358;padding-top:10px;overflow-wrap:anywhere;">MSUO-Community-Edition.msuolicense</div>
 <p style="font-size:14px;line-height:1.65;color:#4a5970;margin:12px 0 0;">Please download the attachment and <strong>keep it in a safe place</strong>. You may need it when configuring the MSUO SDK or restoring your development environment.</p>
 </td></tr></table>
+<p style="font-size:15px;line-height:1.6;color:#435169;margin:20px 0;">You received this license after affirmatively agreeing to the MSUO End-User License Agreement (EULA) version 1.1, attached as <strong>MSUO-EULA.pdf</strong>. Use the software only within the permissions granted by that agreement. Production use requires separate commercial authorization.</p>
 <p style="margin:26px 0 8px;font-size:17px;font-weight:700;color:#182641;">Enjoy the new developer experience.</p>
 <p style="font-size:15px;color:#435169;line-height:1.6;margin:0 0 22px;">Build freely, experiment, and explore a different approach to application architecture.</p>
 <p style="font-size:15px;line-height:1.6;color:#435169;margin:0;">Best regards,<br><strong>The MSUO™ Application Orchestration Kernel Team</strong></p>
@@ -140,6 +237,7 @@ public sealed class LicenseMailer(IConfiguration config, IHttpClientFactory fact
         var text = "Welcome to MSUO™ Application Orchestration Kernel Community Edition\n\n"
             + "Your signed Community Edition license file is attached: " + filename + "\n\n"
             + "Please keep this file in a safe place. You may need it for SDK setup or restoring your development environment.\n\n"
+            + "You received this license after agreeing to the MSUO EULA version 1.1 (attached as MSUO-EULA.pdf). Use the software only within its permitted scope. Production use requires separate commercial authorization.\n\n"
             + "Enjoy the new developer experience.\n\nBest regards,\nThe MSUO Team";
         if (preview) {
             html = html.Replace("Community Edition", "Developer Preview").Replace("Community-Edition", "Developer-Preview");
@@ -155,7 +253,10 @@ public sealed class LicenseMailer(IConfiguration config, IHttpClientFactory fact
             subject = "MSUO™ Application Orchestration Kernel — Your " + (preview ? "Developer Preview" : "Community Edition") + " License",
             html,
             text,
-            attachments = new[] { new { filename, content = Convert.ToBase64String(Encoding.UTF8.GetBytes(license)), content_type = "application/octet-stream" } }
+            attachments = new[] {
+                new { filename, content = Convert.ToBase64String(Encoding.UTF8.GetBytes(license)), content_type = "application/octet-stream" },
+                new { filename = "MSUO-EULA.pdf", content = eula.PdfBase64, content_type = "application/pdf" }
+            }
         });
         using var response=await factory.CreateClient().SendAsync(request,ct);
         if(!response.IsSuccessStatusCode)
@@ -170,7 +271,7 @@ public sealed class LicenseMailer(IConfiguration config, IHttpClientFactory fact
     }
 }
 
-public sealed class PendingMailWorker(FirestoreDb db, LicenseMailer mailer, ILogger<PendingMailWorker> log) : BackgroundService {
+public sealed class PendingMailWorker(FirestoreDb db, LicenseMailer mailer, EulaAgreement eula, ILogger<PendingMailWorker> log) : BackgroundService {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
         while (!stoppingToken.IsCancellationRequested) {
             try {
@@ -180,6 +281,17 @@ public sealed class PendingMailWorker(FirestoreDb db, LicenseMailer mailer, ILog
                     .Limit(25).GetSnapshotAsync(stoppingToken);
                 foreach (var record in docs.Documents) {
                     if (stoppingToken.IsCancellationRequested) break;
+                    if (!eula.WasAccepted(record)) {
+                        // Never claim a legacy request accepted terms it did not actually accept.
+                        // Re-read in a transaction to avoid racing a fresh acceptance.
+                        await db.RunTransactionAsync(async tx => {
+                            var current = await tx.GetSnapshotAsync(record.Reference, stoppingToken);
+                            if (current.Exists && !eula.WasAccepted(current))
+                                tx.Update(record.Reference, new Dictionary<string, object> { ["deliveryStatus"] = "awaitingEulaAcceptance" });
+                            return true;
+                        }, cancellationToken: stoppingToken);
+                        continue;
+                    }
                     var attempts = record.TryGetValue<long>("deliveryAttempts", out var n) ? n : 0L;
                     if (attempts >= 10) { await record.Reference.UpdateAsync(new Dictionary<string, object> { ["deliveryStatus"] = "failed" }, cancellationToken: stoppingToken); continue; }
                     try {

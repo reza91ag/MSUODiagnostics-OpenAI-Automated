@@ -1,0 +1,265 @@
+MSUO™ PROPRIETARY SOFTWARE LICENSE AGREEMENT
+Meta-Schema Universal Orchestration (MSUO)
+License version 1.1 — 27 November 2026
+Copyright © 2026 Sky Digital Dreams e.U. All rights reserved.
+
+1. SCOPE AND ACCEPTANCE
+
+This Agreement governs the proprietary MSUO software supplied by Sky
+Digital Dreams e.U., Vienna, Austria (the “Licensor”), to the individual
+or legal entity accepting this Agreement (the “Licensee”).
+
+“Software” means the proprietary MSUO kernel, runtime, SDK, binaries,
+APIs, project templates, documentation and associated materials supplied
+under this Agreement, including updates supplied under the same terms.
+Materials expressly licensed under separate terms are governed by those
+terms instead.
+
+“Application” means software independently developed by the Licensee
+using MSUO, including application logic, mountable DLLs, schemas,
+configuration, user interfaces and integrations, excluding the Software
+itself and copies or adaptations of its proprietary implementation.
+
+By affirmatively accepting this Agreement and installing or using the
+Software, the Licensee agrees to these terms. A person accepting on
+behalf of an organization must have authority to bind that organization.
+If the Licensee does not agree, the Licensee must not install or use the
+Software, except to the extent otherwise permitted by applicable law.
+
+The Software is proprietary and licensed, not sold. Public availability
+through NuGet or any other distribution channel does not make it open
+source or grant unrestricted usage rights.
+
+2. DEVELOPER PREVIEW AND COMMUNITY LICENSE
+
+Subject to this Agreement and any applicable edition-specific license
+conditions expressly agreed with the Licensor, the Licensor grants the
+Licensee a limited, non-exclusive, non-transferable, non-sublicensable,
+royalty-free license to:
+
+(a) download, install and execute the Software for development,
+    evaluation, education, research, prototyping and testing;
+(b) develop and debug Applications, including Applications intended
+    for future commercial use;
+(c) use the Software in controlled non-production environments,
+    including development machines, CI systems, test servers and
+    staging environments;
+(d) compile and publish Applications into standalone deployment
+    artifacts for non-production testing and evaluation;
+(e) create demonstrations and controlled proofs of concept that do not
+    provide an operational production service; and
+(f) make copies reasonably necessary for these authorized activities.
+
+These permissions apply to Developer Preview and Community releases.
+They do not authorize production use, commercial operation of the
+Software or redistribution of the proprietary kernel to third parties.
+Authorized personnel of an organizational Licensee may use the Software
+on its behalf within the same license scope.
+
+3. PRODUCTION USE AND COMMERCIAL LICENSE
+
+“Production Use” means operating the Software to deliver actual business,
+organizational or end-user functionality, rather than solely for
+controlled development, demonstration or evaluation. It includes internal
+business operations, live customer services, operational IoT systems,
+commercial SaaS and applications serving real operational workloads,
+whether paid or unpaid and whether hosted locally or remotely.
+
+Production Use requires a separate valid commercial license granted by
+the Licensor, unless expressly authorized in writing by the Licensor.
+
+Developing an Application for a commercial purpose does not by itself
+require a commercial license. The Licensee may charge for development
+services and sell or license its independently developed Application
+code. Such transactions do not convey rights to the MSUO Software.
+Commercial distribution or operation of an MSUO-powered Application
+that includes or requires the Software for Production Use requires
+appropriate commercial authorization for the relevant deployment and
+any distribution of the Software.
+
+Commercial licenses may specify authorized users, applications,
+instances, deployment environments, duration and other usage limits.
+Enterprise licensing does not automatically grant unrestricted
+redistribution, sublicensing or managed hosting rights. Those rights
+must be expressly granted in the applicable commercial agreement.
+
+4. RESTRICTIONS
+
+Except as expressly authorized by this Agreement, a separate written
+agreement or mandatory applicable law, the Licensee must not:
+
+(a) use the Software for Production Use under a Developer Preview or
+    Community license;
+(b) sell, rent, sublicense, redistribute, repackage or independently
+    distribute the proprietary Software or make it available as a
+    substitute SDK, runtime or kernel;
+(c) modify, patch, translate or create derivative works of the
+    proprietary Software, except for customization of Applications,
+    configuration and designated editable template materials as allowed
+    by Section 5;
+(d) reverse engineer, decompile or disassemble the proprietary Software
+    for purposes not permitted by mandatory applicable law;
+(e) circumvent or disable license verification, edition restrictions,
+    usage limits or other protection mechanisms, except where expressly
+    permitted by mandatory applicable law;
+(f) forge, share without authorization or misuse license credentials;
+(g) remove or falsify copyright, trademark or proprietary notices;
+(h) offer the Software itself as a hosted runtime, orchestration service,
+    platform-as-a-service, managed kernel or competing MSUO-based SDK
+    without a separate written hosting or redistribution agreement; or
+(i) disclose or distribute proprietary implementation material obtained
+    in breach of this Agreement.
+
+These restrictions do not prohibit lawful independent development of
+competing software or the use of publicly disclosed architectural ideas,
+principles or methodologies, provided no protected MSUO implementation
+or other legally protected material is unlawfully used.
+
+5. APPLICATION OWNERSHIP AND TEMPLATES
+
+As between the parties, the Licensee retains ownership of its independently
+created Application code, business logic, schemas, data, configurations,
+user interfaces and other original materials. The Licensor acquires no
+ownership interest in those materials merely because they use MSUO.
+
+The Licensee may modify and distribute the editable source scaffolding
+expressly supplied for incorporation into Applications, as part of those
+Applications, subject to preservation of applicable notices. This does
+not authorize independent redistribution of the MSUO template package,
+proprietary kernel, runtime binaries or SDK tooling.
+
+The Licensor retains all rights in its proprietary Software, including
+its implementation, binaries, proprietary tooling and documentation.
+No patent, trademark or other intellectual property license is granted
+except as expressly stated or necessarily implied by the authorized use
+of the Software. The Licensee may truthfully identify MSUO compatibility
+without implying endorsement or affiliation.
+
+6. THIRD-PARTY COMPONENTS
+
+Third-party components distributed with or referenced by MSUO remain
+subject to their respective licenses. This Agreement does not restrict
+rights granted by those licenses or claim ownership of third-party code.
+Where a third-party license requires notices, source availability or
+other conditions, those requirements remain applicable to that component.
+
+7. LICENSE VERIFICATION AND CREDENTIALS
+
+The Software may require a valid license credential and may enforce
+edition-specific restrictions. Possession of a working credential or
+successful execution of the Software does not expand the rights granted
+by this Agreement. Conversely, technical capability to perform an
+operation does not constitute legal permission to perform it.
+
+The Licensee is responsible for protecting its license credentials and
+using them only within their authorized scope.
+
+7.1 LICENSE USAGE TELEMETRY
+
+The MSUO kernel uses an asynchronous, best-effort ("fire-and-forget")
+notification mechanism to inform the Licensor's analytics backend of
+license usage. Its purpose is to record the most recent known usage of
+a license and support aggregate license-usage analytics.
+
+The notification is designed to operate independently of the primary
+application execution lifecycle. Failure to deliver an analytics
+notification does not, by itself, prevent or interrupt application
+execution or replace the kernel's license verification requirements.
+
+Telemetry is intended to be limited to a pseudonymous license identifier
+and a last-usage timestamp. The telemetry mechanism must not transmit
+application payloads, business data, application source code, end-user
+content, passwords or private signing keys. Analytics results may be
+aggregated and anonymized. Where a license identifier or network metadata
+can be linked to an identifiable person, such information is treated as
+personal data rather than anonymous data.
+
+Any processing of personal data is subject to applicable data protection
+law and the Licensor's applicable privacy notice, including information
+on purposes, legal basis, retention and data subject rights. Acceptance
+of this Agreement does not constitute consent to processing where
+separate consent is legally required.
+
+8. PREVIEW STATUS, SUPPORT AND UPDATES
+
+Developer Preview releases are pre-release software and may contain
+errors, incomplete features, breaking changes or compatibility issues.
+No commitment to maintenance, support, service availability, backward
+compatibility or future release dates is made unless separately agreed.
+
+The Licensee should maintain appropriate backups and test Applications
+in controlled environments. A new release may be offered under different
+terms, subject to the Licensee's acceptance; this does not retroactively
+alter the terms governing an already licensed release.
+
+9. WARRANTIES AND LIABILITY
+
+To the extent permitted by applicable law, the Software is supplied
+“AS IS” and “AS AVAILABLE”, without voluntary warranties or guarantees
+of uninterrupted operation, fitness for a particular purpose, accuracy,
+security or compatibility.
+
+To the extent permitted by applicable law, the Licensor is not liable
+for loss of profits, loss of business, loss of data or indirect or
+consequential damages arising from use of the Software. For business
+Licensees, liability for ordinary negligence is excluded to the extent
+legally permissible, except where exclusion would defeat essential
+contractual obligations.
+
+Nothing in this Agreement excludes or limits liability for intentional
+misconduct, gross negligence, death or personal injury, mandatory
+product liability, or any other liability or statutory warranty that
+cannot lawfully be excluded or limited. Mandatory consumer rights remain
+unaffected.
+
+10. TERM AND TERMINATION
+
+The Developer Preview and Community license continues while the Licensee
+complies with this Agreement and any expressly agreed duration limits.
+The Licensor may terminate the license for a material breach that is not
+remedied within a reasonable period after notice, or immediately where
+legally permissible for a serious breach that cannot reasonably be cured.
+The Licensee may terminate by ceasing use of the Software.
+
+Upon termination, the Licensee must cease unauthorized use and remove
+copies of the proprietary Software under its control, except copies
+required by law. Termination does not transfer ownership of or require
+deletion of the Licensee's independently developed Application code or
+data. Continued use of the Software requires an applicable valid license.
+Provisions concerning ownership, restrictions on unauthorized use,
+liability and governing law survive termination as applicable.
+
+11. MANDATORY STATUTORY RIGHTS
+
+Nothing in this Agreement restricts rights that cannot be waived under
+applicable law, including applicable rights to make necessary backup
+copies, observe, study or test the functioning of a computer program,
+or decompile it under the statutory conditions for interoperability.
+This includes rights under applicable Austrian copyright law and EU
+Directive 2009/24/EC, as implemented in national law.
+
+12. GOVERNING LAW AND GENERAL PROVISIONS
+
+This Agreement is governed by Austrian law, without depriving consumers
+of mandatory protections applicable in their country of habitual
+residence. For business Licensees, the competent courts in Vienna,
+Austria shall have jurisdiction to the extent legally permissible.
+Mandatory jurisdiction rules remain unaffected.
+
+If any provision is unenforceable, the remaining provisions continue
+in effect to the extent permitted by law. A separate written commercial
+agreement between the parties prevails over this Agreement in the event
+of conflict concerning its expressly authorized commercial rights.
+
+All rights not expressly granted are reserved, subject to applicable law.
+
+13. LICENSING AND CONTACT
+
+Sky Digital Dreams e.U.
+Vienna, Austria
+Official MSUO website: https://msuo-runtime.io/
+
+For production, enterprise, redistribution or managed hosting rights,
+obtain a separate commercial authorization from the Licensor.
+
+END OF AGREEMENT
