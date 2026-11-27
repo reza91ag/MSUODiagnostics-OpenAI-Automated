@@ -56,6 +56,23 @@ if (!builder.Configuration.GetValue<bool>("DISABLE_MAIL_WORKER"))
 
 var app = builder.Build();
 app.UseExceptionHandler();
+app.Use(async (ctx, next) => {
+    var path = ctx.Request.Path.Value ?? "";
+    if (path.Equals("/DeveloperPreview", StringComparison.OrdinalIgnoreCase) ||
+        path.Equals("/preview", StringComparison.OrdinalIgnoreCase) ||
+        path.Equals("/preview.html", StringComparison.OrdinalIgnoreCase) ||
+        path.Equals("/app.js", StringComparison.OrdinalIgnoreCase) ||
+        path.Equals("/api/eula", StringComparison.OrdinalIgnoreCase) ||
+        path.Equals("/api/register", StringComparison.OrdinalIgnoreCase)) {
+        ctx.Response.OnStarting(() => {
+            ctx.Response.Headers.CacheControl = "no-store, no-cache, must-revalidate, max-age=0";
+            ctx.Response.Headers["CDN-Cache-Control"] = "no-store";
+            ctx.Response.Headers["Cloudflare-CDN-Cache-Control"] = "no-store";
+            return Task.CompletedTask;
+        });
+    }
+    await next();
+});
 app.UseDefaultFiles();
 app.UseStaticFiles();
 app.UseRateLimiter();
@@ -93,8 +110,10 @@ app.MapPost("/heart-beat", async (HeartbeatInput input, FirestoreDb db, Cancella
 }).RequireRateLimiting("heartbeat");
 
 app.MapPost("/api/register", async (RegistrationInput input, FirestoreDb db, LicenseSigner signer, EulaAgreement eula, CancellationToken ct) => {
-    if (input.EulaAccepted != true || input.EulaVersion != EulaAgreement.Version || input.EulaSha256 != eula.Sha256)
-        return Results.BadRequest(new { error = "Read and accept the current MSUO End-User License Agreement before requesting a license." });
+    if (!input.EulaAccepted)
+        return Results.BadRequest(new { code = "eula_not_accepted", error = "Please accept the End-User License Agreement before requesting a license." });
+    if (input.EulaVersion != EulaAgreement.Version || input.EulaSha256 != eula.Sha256)
+        return Results.Conflict(new { code = "eula_changed", error = "The agreement has changed. Please review and accept the current agreement." });
     // No passwords, no Firebase Authentication and no browser Firebase API key.
     if (string.IsNullOrWhiteSpace(input.Email) || input.Email.Length > 254)
         return Results.BadRequest(new { error = "Enter a valid email address." });
