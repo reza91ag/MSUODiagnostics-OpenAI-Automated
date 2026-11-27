@@ -238,7 +238,7 @@ public sealed class LicenseMailer(IConfiguration config, IHttpClientFactory fact
 <tr><td align="center">
 <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:620px;border:1px solid #e0e5ed;border-radius:18px;background:#ffffff;overflow:hidden;">
 <tr><td align="center" style="padding:36px 32px 15px;">
-<img alt="MSUO" width="90" height="82" src="https://license.msuo-runtime.io/msuo-email-logo.png" style="display:block;width:90px;height:82px;object-fit:contain;margin:0 auto 12px;">
+<img alt="MSUO" width="90" height="82" src="cid:msuo-blue-logo" style="display:block;width:90px;height:82px;object-fit:contain;margin:0 auto 12px;">
 <div style="font-size:13px;letter-spacing:2px;font-weight:700;color:#596a89;">MSUO™ APPLICATION ORCHESTRATION KERNEL</div>
 </td></tr>
 <tr><td style="padding:12px 36px 34px;">
@@ -283,9 +283,10 @@ public sealed class LicenseMailer(IConfiguration config, IHttpClientFactory fact
             subject = "MSUO™ Application Orchestration Kernel — Your " + (preview ? "Developer Preview" : "Community Edition") + " License",
             html,
             text,
-            attachments = new[] {
+            attachments = new object[] {
                 new { filename, content = Convert.ToBase64String(Encoding.UTF8.GetBytes(license)), content_type = "application/octet-stream" },
-                new { filename = "MSUO-EULA.pdf", content = acceptedAgreement.PdfBase64, content_type = "application/pdf" }
+                new { filename = "MSUO-EULA.pdf", content = acceptedAgreement.PdfBase64, content_type = "application/pdf" },
+                new { filename = "msuo-logo.png", content = EmailLogo.PngBase64, content_type = "image/png", content_id = "msuo-blue-logo" }
             }
         });
         using var response=await factory.CreateClient().SendAsync(request,ct);
