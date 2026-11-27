@@ -10,7 +10,6 @@ async function loadEula(){
   if(!data.text||!data.version||!data.sha256)throw Error('Incomplete EULA');
   eula=data;document.getElementById('eula-text').textContent=data.text;
   document.getElementById('eula-version').textContent='Version '+data.version;
-  const link=document.getElementById('eula-pdf');link.href=data.pdfUrl;link.hidden=false;
   accepted.disabled=false;accepted.checked=false;refresh();
  }catch{msg.textContent='The license agreement could not be loaded. Reload this page to try again.';}
 }
