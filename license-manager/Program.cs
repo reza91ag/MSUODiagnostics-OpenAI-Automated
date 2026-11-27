@@ -70,7 +70,7 @@ app.MapGet("/DeveloperPreview", () => Results.File(Path.Combine(app.Environment.
 app.MapGet("/preview", () => Results.Redirect("/DeveloperPreview"));
 app.MapGet("/api/eula", (EulaAgreement eula, HttpContext ctx) => {
     ctx.Response.Headers.CacheControl = "no-store";
-    return Results.Ok(new { version = EulaAgreement.Version, sha256 = eula.Sha256, text = eula.Text, pdfUrl = "/eula/1.1/MSUO-EULA.pdf" });
+    return Results.Ok(new { version = EulaAgreement.Version, sha256 = eula.Sha256, text = eula.Text, pdfUrl = $"/eula/{EulaAgreement.Version}/MSUO-EULA.pdf" });
 });
 app.MapPost("/heart-beat", async (HeartbeatInput input, FirestoreDb db, CancellationToken ct) => {
     if (!HeartbeatCredential.TryResolve(input, out var edition, out var id, out var fingerprint))
@@ -150,11 +150,16 @@ public sealed record HeartbeatInput(string? License = null, string? LicenseId = 
     string? LicenseFingerprint = null, string? Edition = null);
 
 public sealed class EulaAgreement {
-    public const string Version = "1.1";
+    public const string Version = "1.2";
+    public string DocumentVersion { get; }
+    private readonly EulaAgreement? previous;
     public string Text { get; }
     public string Sha256 { get; }
     public string PdfBase64 { get; }
-    public EulaAgreement(string folder) {
+    public EulaAgreement(string folder, string version = Version) {
+        DocumentVersion = version;
+        if (version == Version)
+            previous = new EulaAgreement(Path.Combine(Path.GetDirectoryName(folder)!, "1.1"), "1.1");
         var bytes = File.ReadAllBytes(Path.Combine(folder, "LICENSE.txt"));
         Text = Encoding.UTF8.GetString(bytes);
         Sha256 = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
@@ -162,9 +167,10 @@ public sealed class EulaAgreement {
     }
     public bool WasAccepted(DocumentSnapshot record) =>
         record.TryGetValue<bool>("eulaAccepted", out var agreed) && agreed &&
-        record.TryGetValue<string>("eulaVersion", out var version) && version == Version &&
+        record.TryGetValue<string>("eulaVersion", out var version) && version == DocumentVersion &&
         record.TryGetValue<string>("eulaSha256", out var hash) && hash == Sha256 &&
         record.TryGetValue<Timestamp>("eulaAcceptedUtc", out _);
+    public EulaAgreement? AcceptedAgreement(DocumentSnapshot record) => WasAccepted(record) ? this : previous?.AcceptedAgreement(record);
 }
 
 public static class HeartbeatCredential {
@@ -195,8 +201,8 @@ public static class HeartbeatCredential {
     }
 }
 
-public sealed class LicenseMailer(IConfiguration config, IHttpClientFactory factory, EulaAgreement eula) {
-    public async Task SendAsync(string address, string license, string edition, CancellationToken ct) {
+public sealed class LicenseMailer(IConfiguration config, IHttpClientFactory factory) {
+    public async Task SendAsync(string address, string license, string edition, EulaAgreement acceptedAgreement, CancellationToken ct) {
         var apiKey = config["RESEND_API_KEY"] ?? throw new InvalidOperationException("RESEND_API_KEY not configured.");
         var from = config["RESEND_FROM"] ?? throw new InvalidOperationException("RESEND_FROM not configured.");
 
@@ -223,7 +229,7 @@ public sealed class LicenseMailer(IConfiguration config, IHttpClientFactory fact
 <div style="font-size:16px;font-weight:700;color:#1b3358;padding-top:10px;overflow-wrap:anywhere;">MSUO-Community-Edition.msuolicense</div>
 <p style="font-size:14px;line-height:1.65;color:#4a5970;margin:12px 0 0;">Please download the attachment and <strong>keep it in a safe place</strong>. You may need it when configuring the MSUO SDK or restoring your development environment.</p>
 </td></tr></table>
-<p style="font-size:15px;line-height:1.6;color:#435169;margin:20px 0;">You received this license after affirmatively agreeing to the MSUO End-User License Agreement (EULA) version 1.1, attached as <strong>MSUO-EULA.pdf</strong>. Use the software only within the permissions granted by that agreement. Production use requires separate commercial authorization.</p>
+<p style="font-size:15px;line-height:1.6;color:#435169;margin:20px 0;">You received this license after affirmatively agreeing to the MSUO End-User License Agreement (EULA) version EULA_VERSION_PLACEHOLDER, attached as <strong>MSUO-EULA.pdf</strong>. Use the software only within the permissions granted by that agreement. Production use requires separate commercial authorization.</p>
 <p style="margin:26px 0 8px;font-size:17px;font-weight:700;color:#182641;">Enjoy the new developer experience.</p>
 <p style="font-size:15px;color:#435169;line-height:1.6;margin:0 0 22px;">Build freely, experiment, and explore a different approach to application architecture.</p>
 <p style="font-size:15px;line-height:1.6;color:#435169;margin:0;">Best regards,<br><strong>The MSUO™ Application Orchestration Kernel Team</strong></p>
@@ -238,13 +244,15 @@ public sealed class LicenseMailer(IConfiguration config, IHttpClientFactory fact
         var text = "Welcome to MSUO™ Application Orchestration Kernel Community Edition\n\n"
             + "Your signed Community Edition license file is attached: " + filename + "\n\n"
             + "Please keep this file in a safe place. You may need it for SDK setup or restoring your development environment.\n\n"
-            + "You received this license after agreeing to the MSUO EULA version 1.1 (attached as MSUO-EULA.pdf). Use the software only within its permitted scope. Production use requires separate commercial authorization.\n\n"
+            + "You received this license after agreeing to the MSUO EULA version EULA_VERSION_PLACEHOLDER (attached as MSUO-EULA.pdf). Use the software only within its permitted scope. Production use requires separate commercial authorization.\n\n"
             + "Enjoy the new developer experience.\n\nBest regards,\nThe MSUO Team";
         if (preview) {
             html = html.Replace("Community Edition", "Developer Preview").Replace("Community-Edition", "Developer-Preview");
             text = text.Replace("Community Edition", "Developer Preview").Replace("Community-Edition", "Developer-Preview");
             filename = filename.Replace("Community-Edition", "Developer-Preview");
         }
+        html = html.Replace("EULA_VERSION_PLACEHOLDER", acceptedAgreement.DocumentVersion);
+        text = text.Replace("EULA_VERSION_PLACEHOLDER", acceptedAgreement.DocumentVersion);
         using var request = new HttpRequestMessage(HttpMethod.Post,"https://api.resend.com/emails");
         request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer",apiKey);
         request.Headers.UserAgent.ParseAdd("MSUO-LicenseManager/1.0");
@@ -256,7 +264,7 @@ public sealed class LicenseMailer(IConfiguration config, IHttpClientFactory fact
             text,
             attachments = new[] {
                 new { filename, content = Convert.ToBase64String(Encoding.UTF8.GetBytes(license)), content_type = "application/octet-stream" },
-                new { filename = "MSUO-EULA.pdf", content = eula.PdfBase64, content_type = "application/pdf" }
+                new { filename = "MSUO-EULA.pdf", content = acceptedAgreement.PdfBase64, content_type = "application/pdf" }
             }
         });
         using var response=await factory.CreateClient().SendAsync(request,ct);
@@ -282,12 +290,13 @@ public sealed class PendingMailWorker(FirestoreDb db, LicenseMailer mailer, Eula
                     .Limit(25).GetSnapshotAsync(stoppingToken);
                 foreach (var record in docs.Documents) {
                     if (stoppingToken.IsCancellationRequested) break;
-                    if (!eula.WasAccepted(record)) {
+                    var acceptedAgreement = eula.AcceptedAgreement(record);
+                    if (acceptedAgreement is null) {
                         // Never claim a legacy request accepted terms it did not actually accept.
                         // Re-read in a transaction to avoid racing a fresh acceptance.
                         await db.RunTransactionAsync(async tx => {
                             var current = await tx.GetSnapshotAsync(record.Reference, stoppingToken);
-                            if (current.Exists && !eula.WasAccepted(current))
+                            if (current.Exists && eula.AcceptedAgreement(current) is null)
                                 tx.Update(record.Reference, new Dictionary<string, object> { ["deliveryStatus"] = "awaitingEulaAcceptance" });
                             return true;
                         }, cancellationToken: stoppingToken);
@@ -300,7 +309,7 @@ public sealed class PendingMailWorker(FirestoreDb db, LicenseMailer mailer, Eula
                             ["deliveryAttempts"] = attempts + 1,
                             ["lastAttemptAt"] = Timestamp.GetCurrentTimestamp()
                         }, cancellationToken: stoppingToken);
-                        await mailer.SendAsync(record.GetValue<string>("email"), record.GetValue<string>("licenseKey"), edition, stoppingToken);
+                        await mailer.SendAsync(record.GetValue<string>("email"), record.GetValue<string>("licenseKey"), edition, acceptedAgreement, stoppingToken);
                         await record.Reference.UpdateAsync(new Dictionary<string, object> {
                             ["deliveryStatus"] = "sent", ["sentAt"] = Timestamp.GetCurrentTimestamp()
                         }, cancellationToken: stoppingToken);
