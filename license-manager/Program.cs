@@ -128,21 +128,22 @@ app.MapPost("/api/register", async (RegistrationInput input, FirestoreDb db, Lic
     if (input.Edition != "DeveloperPreview") return Results.BadRequest(new { error = "Community Edition is coming soon." });
     const string edition = "DeveloperPreview";
     var doc = db.Collection(edition).Document(hash);
-    await db.RunTransactionAsync(async tx => {
+    var isResend = await db.RunTransactionAsync(async tx => {
         var existing = await tx.GetSnapshotAsync(doc, ct);
         if (!existing.Exists) {
             var license = signer.Issue(hash, email, edition);
             tx.Create(doc, new Dictionary<string, object> {
                 ["email"] = email, ["emailHash"] = hash, ["edition"] = edition,
                 ["licenseKey"] = license, ["issuedAt"] = Timestamp.GetCurrentTimestamp(),
-                ["deliveryStatus"] = "pending", ["deliveryAttempts"] = 0, ["schemaVersion"] = 2,
+                ["deliveryStatus"] = "pending", ["deliveryAttempts"] = 0, ["isResend"] = false, ["schemaVersion"] = 2,
                 ["usageCount"] = 0L, ["eulaAccepted"] = true, ["eulaVersion"] = EulaAgreement.Version,
                 ["eulaSha256"] = eula.Sha256, ["eulaAcceptedUtc"] = FieldValue.ServerTimestamp
             });
+            return false;
         } else {
             // Recover the existing key by requeueing its original record.
             // Never replace the key, original issuance date, or usage statistics.
-            var updates = new Dictionary<string, object>();
+            var updates = new Dictionary<string, object> { ["isResend"] = true };
             var pending = existing.TryGetValue<string>("deliveryStatus", out var status) && status == "pending";
             if (!pending) {
                 updates["deliveryStatus"] = "pending";
@@ -159,7 +160,9 @@ app.MapPost("/api/register", async (RegistrationInput input, FirestoreDb db, Lic
         return true;
     }, cancellationToken: ct);
     // The mail worker reads the stored credential and delivers it only to the registered address.
-    return Results.Accepted(value: new { message = "Your license request has been received. Check your email shortly." });
+    return Results.Accepted(value: new { message = isResend
+        ? "A license already exists for this email address. Your original license will be resent shortly."
+        : "Your license request has been received. Check your email shortly." });
 }).RequireRateLimiting("register");
 
 app.Run();
@@ -229,7 +232,7 @@ public static class HeartbeatCredential {
 }
 
 public sealed class LicenseMailer(IConfiguration config, IHttpClientFactory factory) {
-    public async Task SendAsync(string address, string license, string edition, EulaAgreement acceptedAgreement, CancellationToken ct) {
+    public async Task SendAsync(string address, string license, string edition, EulaAgreement acceptedAgreement, bool isResend, CancellationToken ct) {
         var apiKey = config["RESEND_API_KEY"] ?? throw new InvalidOperationException("RESEND_API_KEY not configured.");
         var from = config["RESEND_FROM"] ?? throw new InvalidOperationException("RESEND_FROM not configured.");
 
@@ -273,6 +276,12 @@ public sealed class LicenseMailer(IConfiguration config, IHttpClientFactory fact
             + "Please keep this file in a safe place. You may need it for SDK setup or restoring your development environment.\n\n"
             + "You received this license after agreeing to the MSUO EULA version EULA_VERSION_PLACEHOLDER (attached as MSUO-EULA.pdf). Use the software only within its permitted scope. Production use requires separate commercial authorization.\n\n"
             + "Enjoy the new developer experience.\n\nBest regards,\nThe MSUO Team";
+        if (isResend) {
+            html = html.Replace("Welcome to MSUO™ Application Orchestration Kernel", "Your MSUO™ license — resend")
+                .Replace("Your <strong>Community Edition</strong> license has been issued and is attached to this email.", "As requested, we are resending your previously issued <strong>Community Edition</strong> license. The attached license is your original license; no new key has been generated.");
+            text = text.Replace("Welcome to MSUO™ Application Orchestration Kernel Community Edition", "Your MSUO™ Community Edition license — resend")
+                .Replace("Your signed Community Edition license file is attached:", "As requested, we are resending your original Community Edition license. No new key has been generated. Attached file:");
+        }
         if (preview) {
             html = html.Replace("Community Edition", "Developer Preview").Replace("Community-Edition", "Developer-Preview");
             text = text.Replace("Community Edition", "Developer Preview").Replace("Community-Edition", "Developer-Preview");
@@ -286,7 +295,7 @@ public sealed class LicenseMailer(IConfiguration config, IHttpClientFactory fact
         request.Content = System.Net.Http.Json.JsonContent.Create(new {
             from,
             to = new[] { address },
-            subject = "MSUO™ Application Orchestration Kernel — Your " + (preview ? "Developer Preview" : "Community Edition") + " License",
+            subject = "MSUO™ Application Orchestration Kernel — Your " + (preview ? "Developer Preview" : "Community Edition") + " License" + (isResend ? " (Resend)" : ""),
             html,
             text,
             attachments = new object[] {
@@ -337,7 +346,8 @@ public sealed class PendingMailWorker(FirestoreDb db, LicenseMailer mailer, Eula
                             ["deliveryAttempts"] = attempts + 1,
                             ["lastAttemptAt"] = Timestamp.GetCurrentTimestamp()
                         }, cancellationToken: stoppingToken);
-                        await mailer.SendAsync(record.GetValue<string>("email"), record.GetValue<string>("licenseKey"), edition, acceptedAgreement, stoppingToken);
+                        var isResend = record.TryGetValue<bool>("isResend", out var resend) && resend;
+                        await mailer.SendAsync(record.GetValue<string>("email"), record.GetValue<string>("licenseKey"), edition, acceptedAgreement, isResend, stoppingToken);
                         await record.Reference.UpdateAsync(new Dictionary<string, object> {
                             ["deliveryStatus"] = "sent", ["sentAt"] = Timestamp.GetCurrentTimestamp()
                         }, cancellationToken: stoppingToken);
